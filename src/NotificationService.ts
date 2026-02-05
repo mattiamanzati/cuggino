@@ -48,12 +48,8 @@ export const NotificationServiceLayer = (cwd: string) => Layer.effect(
       send: ({ title, body }) =>
         Effect.scoped(
           Effect.gen(function*() {
-            const safeTitle = escapeAppleScript(title)
-            const safeBody = escapeAppleScript(body)
             const safeRepo = escapeAppleScript(repoName)
-
-            const script = [
-              `display notification "${safeBody}" with title "${safeTitle}"`,
+            const focusScript = [
               `tell application "System Events"`,
               `  set matchingProcesses to every process whose visible is true`,
               `  repeat with p in matchingProcesses`,
@@ -70,7 +66,13 @@ export const NotificationServiceLayer = (cwd: string) => Layer.effect(
               `end tell`
             ].join("\n")
 
-            const cmd = ChildProcess.make("osascript", ["-e", script])
+            const cmd = ChildProcess.make("terminal-notifier", [
+              "-title", title,
+              "-message", body,
+              "-sound", "default",
+              "-group", `cuggino:${cwd}`,
+              "-execute", `osascript -e '${focusScript}'`
+            ])
             yield* ChildProcess.string(cmd).pipe(provide, Effect.ignore)
           })
         )
