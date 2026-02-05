@@ -20,7 +20,7 @@ export const CugginoConfig = Schema.Struct({
   checkCommand: Schema.optionalKey(Schema.String),
   commit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false)),
   audit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false)),
-  notify: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false))
+  notify: Schema.String.pipe(Schema.withDecodingDefaultKey(() => "none"))
 })
 
 export type CugginoConfig = typeof CugginoConfig.Type

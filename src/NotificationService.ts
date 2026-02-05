@@ -1,6 +1,5 @@
 import { Effect, Layer, ServiceMap } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { execFile } from "node:child_process"
 
 export interface NotificationServiceShape {
   readonly repoName: string
@@ -41,37 +40,40 @@ export const NotificationServiceLayer = (cwd: string) => Layer.effect(
   NotificationService,
   Effect.gen(function*() {
     const repoName = yield* detectRepoName(cwd)
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+    const provide = Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner)
 
     return {
       repoName,
       send: ({ title, body }) =>
-        Effect.callback<void>((resume) => {
-          const safeTitle = escapeAppleScript(title)
-          const safeBody = escapeAppleScript(body)
-          const safeRepo = escapeAppleScript(repoName)
+        Effect.scoped(
+          Effect.gen(function*() {
+            const safeTitle = escapeAppleScript(title)
+            const safeBody = escapeAppleScript(body)
+            const safeRepo = escapeAppleScript(repoName)
 
-          const script = [
-            `display notification "${safeBody}" with title "${safeTitle}"`,
-            `tell application "System Events"`,
-            `  set matchingProcesses to every process whose visible is true`,
-            `  repeat with p in matchingProcesses`,
-            `    try`,
-            `      set windowNames to name of every window of p`,
-            `      repeat with w in windowNames`,
-            `        if w contains "${safeRepo}" then`,
-            `          set frontmost of p to true`,
-            `          return`,
-            `        end if`,
-            `      end repeat`,
-            `    end try`,
-            `  end repeat`,
-            `end tell`
-          ].join("\n")
+            const script = [
+              `display notification "${safeBody}" with title "${safeTitle}"`,
+              `tell application "System Events"`,
+              `  set matchingProcesses to every process whose visible is true`,
+              `  repeat with p in matchingProcesses`,
+              `    try`,
+              `      set windowNames to name of every window of p`,
+              `      repeat with w in windowNames`,
+              `        if w contains "${safeRepo}" then`,
+              `          set frontmost of p to true`,
+              `          return`,
+              `        end if`,
+              `      end repeat`,
+              `    end try`,
+              `  end repeat`,
+              `end tell`
+            ].join("\n")
 
-          execFile("osascript", ["-e", script], () => {
-            resume(Effect.void)
+            const cmd = ChildProcess.make("osascript", ["-e", script])
+            yield* ChildProcess.string(cmd).pipe(provide, Effect.ignore)
           })
-        })
+        )
     }
   })
 )

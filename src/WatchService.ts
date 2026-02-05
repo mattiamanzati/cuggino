@@ -33,7 +33,7 @@ export interface WatchRunOptions {
   readonly checkCommand?: string
   readonly commit?: boolean
   readonly audit?: boolean
-  readonly notify?: boolean
+  readonly notify?: string
 }
 
 export type WatchEvent = LoopEvent | WatchLoopEvent
@@ -204,22 +204,22 @@ export const WatchServiceLayer = Layer.effect(
                       if (specCount > 0) {
                         if (prevState !== "spec-issue") {
                           yield* Queue.offer(queue, new WatchSpecIssueWaiting({}))
-                          if (opts.notify) {
+                          if (opts.notify !== undefined && opts.notify !== "none") {
                             yield* notification.send({
                               title: notification.repoName,
                               body: "A spec issue needs to be resolved before continuing"
-                            })
+                            }).pipe(Effect.ignore)
                           }
                           prevState = "spec-issue"
                         }
                       } else if (backlogCount === 0) {
                         if (prevState !== "backlog-empty") {
                           yield* Queue.offer(queue, new WatchBacklogWaiting({}))
-                          if (opts.notify) {
+                          if (opts.notify !== undefined && opts.notify !== "none") {
                             yield* notification.send({
                               title: notification.repoName,
                               body: "Work is complete, waiting for you"
-                            })
+                            }).pipe(Effect.ignore)
                           }
                           prevState = "backlog-empty"
                         }

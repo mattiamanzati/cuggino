@@ -34,9 +34,12 @@ export const setupCommand = Command.make(
           message: "Run audit agent during idle time",
           initial: existingConfig.audit
         }),
-        notify: Prompt.toggle({
-          message: "Send system notifications when watch mode is idle",
-          initial: existingConfig.notify
+        notify: Prompt.select({
+          message: "Notification method when watch mode is idle",
+          choices: [
+            { title: "none", value: "none" },
+            { title: "osx-notification", value: "osx-notification" }
+          ]
         })
       }).pipe(Prompt.run)
       const config = {
