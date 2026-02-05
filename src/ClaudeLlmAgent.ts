@@ -6,6 +6,7 @@ import { DateTime } from "effect"
 import {
   SystemMessage,
   AgentMessage,
+  UserMessage,
   ToolCall,
   ToolResult,
   LlmSessionError,
@@ -88,6 +89,9 @@ const parseClaudeMessage = (json: unknown): Effect.Effect<Array<LlmAgentEvent>, 
 
       if (content) {
         for (const block of content) {
+          if (block.type === "text" && typeof block.text === "string") {
+            events.push(new UserMessage({ text: block.text }))
+          }
           if (block.type === "tool_result" || block.tool_use_id) {
             // block.content can be a string or an array of content blocks
             let output: string
