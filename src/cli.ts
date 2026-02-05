@@ -8,6 +8,7 @@ import { ClaudeLlmAgentLayer } from "./ClaudeLlmAgent.js"
 import { StorageServiceLayer } from "./StorageService.js"
 import { LoopServiceLayer } from "./LoopService.js"
 import { WatchServiceLayer } from "./WatchService.js"
+import { NotificationServiceLayer } from "./NotificationService.js"
 import { SessionServiceMap } from "./SessionService.js"
 import { root } from "./cli/command.js"
 
@@ -19,6 +20,7 @@ const baseServicesLayer = LoopServiceLayer.pipe(
 )
 
 const servicesLayer = WatchServiceLayer.pipe(
+  Layer.provideMerge(NotificationServiceLayer(process.cwd())),
   Layer.provideMerge(baseServicesLayer)
 )
 

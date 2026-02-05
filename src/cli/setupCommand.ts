@@ -33,6 +33,10 @@ export const setupCommand = Command.make(
         audit: Prompt.toggle({
           message: "Run audit agent during idle time",
           initial: existingConfig.audit
+        }),
+        notify: Prompt.toggle({
+          message: "Send system notifications when watch mode is idle",
+          initial: existingConfig.notify
         })
       }).pipe(Prompt.run)
       const config = {
@@ -49,6 +53,7 @@ export const setupCommand = Command.make(
         console.log(`  checkCommand:   ${config.checkCommand || "(none)"}`)
         console.log(`  commit:         ${config.commit}`)
         console.log(`  audit:          ${config.audit}`)
+        console.log(`  notify:         ${config.notify}`)
         console.log()
       })
     })

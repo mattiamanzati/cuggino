@@ -18,7 +18,8 @@ export const watchCommand = Command.make(
         setupCommand: config.setupCommand,
         checkCommand: config.checkCommand,
         commit: config.commit,
-        audit: config.audit
+        audit: config.audit,
+        notify: config.notify
       }).pipe(
         withCliOutput,
         Stream.runDrain

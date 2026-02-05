@@ -8,6 +8,7 @@ import { isLoopTerminalEvent, type LoopEvent, type LoopTerminalEvent } from "./L
 import { auditSystemPrompt, auditPrompt } from "./AgentPrompts.js"
 import { ToBeDiscussed } from "./LlmMarkerEvent.js"
 import { extractMarkers, type MarkerExtractorConfig } from "./extractMarkers.js"
+import { NotificationService } from "./NotificationService.js"
 import {
   WatchBacklogWaiting,
   WatchProcessingItem,
@@ -32,6 +33,7 @@ export interface WatchRunOptions {
   readonly checkCommand?: string
   readonly commit?: boolean
   readonly audit?: boolean
+  readonly notify?: boolean
 }
 
 export type WatchEvent = LoopEvent | WatchLoopEvent
@@ -177,6 +179,7 @@ export const WatchServiceLayer = Layer.effect(
     const storage = yield* StorageService
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
+    const notification = yield* NotificationService
 
     return {
       run: (opts) =>
@@ -201,11 +204,23 @@ export const WatchServiceLayer = Layer.effect(
                       if (specCount > 0) {
                         if (prevState !== "spec-issue") {
                           yield* Queue.offer(queue, new WatchSpecIssueWaiting({}))
+                          if (opts.notify) {
+                            yield* notification.send({
+                              title: notification.repoName,
+                              body: "A spec issue needs to be resolved before continuing"
+                            })
+                          }
                           prevState = "spec-issue"
                         }
                       } else if (backlogCount === 0) {
                         if (prevState !== "backlog-empty") {
                           yield* Queue.offer(queue, new WatchBacklogWaiting({}))
+                          if (opts.notify) {
+                            yield* notification.send({
+                              title: notification.repoName,
+                              body: "Work is complete, waiting for you"
+                            })
+                          }
                           prevState = "backlog-empty"
                         }
                       }
