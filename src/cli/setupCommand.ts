@@ -42,10 +42,11 @@ export const setupCommand = Command.make(
           ]
         })
       }).pipe(Prompt.run)
+      const { setupCommand, checkCommand, ...rest } = result
       const config = {
-        ...result,
-        ...(result.setupCommand.trim() !== "" ? { setupCommand: result.setupCommand.trim() } : {}),
-        ...(result.checkCommand.trim() !== "" ? { checkCommand: result.checkCommand.trim() } : {})
+        ...rest,
+        ...(setupCommand.trim() !== "" ? { setupCommand: setupCommand.trim() } : {}),
+        ...(checkCommand.trim() !== "" ? { checkCommand: checkCommand.trim() } : {})
       }
       yield* storage.writeConfig(config)
       yield* Effect.sync(() => {
