@@ -1,0 +1,1 @@
+{"specsPath":".specs","maxIterations":10,"checkCommand":"pnpm check && pnpm test","commit":true,"audit":true}

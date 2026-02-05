@@ -1,0 +1,38 @@
+{
+  "name": "cuggino",
+  "description": "A dangerous autonomous coding loop focused on specification discussion",
+  "version": "0.0.1",
+  "author": "mattiamanzati",
+  "type": "module",
+  "packageManager": "pnpm@10.17.1",
+  "bin": {
+    "cuggino": "./dist/cli.mjs"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "tsdown",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "ci": "pnpm run check && pnpm run test",
+"prepare": "effect-language-service patch"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+  },
+  "devDependencies": {
+    "effect": "https://pkg.pr.new/Effect-TS/effect-smol/effect@6a720b2",
+    "@effect/platform-node": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node@6a720b2",
+    "uuid": "^11.0.0",
+    "@effect/language-service": "^0.72.1",
+    "@types/node": "^25.0.6",
+    "tsdown": "^0.20.1",
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "4.0.16"
+  }
+}
