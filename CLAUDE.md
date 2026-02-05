@@ -21,3 +21,5 @@ This folder contains the specifications for what we are building. Read these to 
 
 The Effect Language Service comes in with a useful CLI that can help you with commands to get a better understanding your Effect Layers and Services, and to help you compose them correctly.
 <!-- effect-language-service:end -->
+
+# Spec writing style

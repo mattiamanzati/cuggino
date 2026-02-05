@@ -196,9 +196,9 @@ ${opts.checkOutput ? `0. Review the check output issues and fix them`: ``}
 1. Read plan from ${opts.planPath}
 2. Check ${opts.sessionPath} for previous progress
 3. Pick one and only one task to implement
-3. Implement that task
-4. Emit note markers as you work for findings related to the task
-5. Emit a terminal marker
+4. Implement that task
+5. Emit note markers as you work for findings related to the task
+6. Emit a terminal marker
 
 ## Markers
 
