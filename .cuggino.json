@@ -1,1 +1,1 @@
-{"specsPath":".specs","maxIterations":10,"setupCommand":"","checkCommand":"pnpm check && pnpm test","commit":true,"audit":true,"notify":"osx-notification"}
+{"specsPath":".specs","maxIterations":10,"checkCommand":"pnpm check && pnpm test","commit":true,"audit":true,"notify":"osx-notification"}
