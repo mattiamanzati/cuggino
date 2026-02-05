@@ -46,7 +46,7 @@ Contains "to be discussed" items — findings from the [audit agent](./audit-age
 Files:
 - `<uuid>.md` — A single finding (content from a `<TO_BE_DISCUSSED>` marker)
 
-These files are created by the watch service when the audit agent emits `<TO_BE_DISCUSSED>` markers during idle time. They are intended to be reviewed and acted upon by the user via the `plan` command, similar to spec issues.
+These files are created by the watch service when the audit agent emits `<TO_BE_DISCUSSED>` markers during idle time. They are intended to be reviewed and acted upon by the user via `cuggino` (PM mode), similar to spec issues.
 
 ## StorageService
 

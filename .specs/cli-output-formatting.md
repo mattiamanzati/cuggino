@@ -96,12 +96,10 @@ Formats watch service events. Most events are rendered with a `[Watch]` prefix i
 
 | Event | Color | Format |
 |-------|-------|--------|
-| `WatchBacklogEmpty` | Dim | `[Watch] Backlog empty, watching for new items...` + terminal bell (`\x07`) |
-| `WatchChangeDetected` | Dim | `[Watch] Change detected, debouncing...` |
-| `WatchDebounceComplete` | Dim | `[Watch] Debounce complete, checking folder...` |
+| `WatchSpecIssueWaiting` | Dim | `[Watch] Spec issue detected, waiting for resolution...` |
+| `WatchBacklogWaiting` | Dim | `[Watch] Backlog empty, waiting for new items...` + terminal bell (`\x07`) |
 | `WatchProcessingItem` | Dim | `[Watch] Processing: {filename}` |
 | `WatchItemCompleted` | Dim | `[Watch] Completed: {filename}` |
-| `WatchSpecIssueWaiting` | Dim | `[Watch] Spec issue detected, waiting for resolution...` |
 | `WatchAuditStarted` | Cyan (`\x1b[36m`) | `[Watch] Starting audit agent...` |
 | `WatchAuditEnded` | Cyan (`\x1b[36m`) | `[Watch] Audit agent finished.` |
 | `WatchAuditInterrupted` | Cyan (`\x1b[36m`) | `[Watch] Audit agent interrupted, work arrived.` |
@@ -224,11 +222,11 @@ I'll analyze the codebase structure...
 
 ### Watch Events
 ```
-[Watch] Backlog empty, watching for new items...
+[Watch] Spec issue detected, waiting for resolution...
+[Watch] Backlog empty, waiting for new items...
 [Watch] Starting audit agent...
 [Watch] Processing: 001-add-auth.md
 [Watch] Completed: 001-add-auth.md
-[Watch] Spec issue detected, waiting for resolution...
 ```
 
 ### Audit Findings
@@ -240,7 +238,7 @@ I'll analyze the codebase structure...
 
 ## Terminal Bell
 
-The `WatchBacklogEmpty` event appends the terminal bell character (`\x07`) to its formatted output. This causes the terminal to play a notification sound (or flash, depending on the user's terminal settings) when the watch loop becomes idle after clearing all backlog items. The bell is part of the formatted string — no separate mechanism is needed.
+The `WatchBacklogWaiting` event appends the terminal bell character (`\x07`) to its formatted output. This causes the terminal to play a notification sound (or flash, depending on the user's terminal settings) when the watch loop becomes idle after clearing all backlog items. The bell is part of the formatted string — no separate mechanism is needed.
 
 ## ANSI Escape Codes Reference
 

@@ -438,7 +438,7 @@ Agents are executed by spawning `claude` CLI processes. Each agent type receives
 The `LlmAgent` service exposes two methods:
 
 - **`spawn`** — Non-interactive, streaming mode. Returns a stream of parsed events. Used by the autonomous coding loop (planning, implementing, reviewing agents).
-- **`interactive`** — Interactive mode. Inherits stdio so the user talks directly to the agent in the terminal. Returns the process exit code. Used by the `plan` command.
+- **`interactive`** — Interactive mode. Inherits stdio so the user talks directly to the agent in the terminal. Returns the process exit code. Used by PM mode (the default command).
 
 ### LlmAgentSpawnOptions
 

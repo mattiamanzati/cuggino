@@ -11,19 +11,39 @@ src/
   cli.ts                  # Entrypoint: layer composition, provides layers, runs the command
   cli/
     runCommand.ts         # "run" subcommand
-    planCommand.ts        # "plan" subcommand
     watchCommand.ts       # "watch" subcommand
     setupCommand.ts       # "setup" subcommand
-    command.ts            # Root command with subcommands registered
+    command.ts            # Root command: default handler runs PM mode, subcommands registered
+```
+
+## Root Command — `src/cli/command.ts`
+
+Defines the root `cuggino` command with the `version` flag (inline). Registers subcommands via `Command.withSubcommands`.
+
+When invoked **without a subcommand**, the root command handler starts PM mode (project manager) — an interactive Claude session for discussing specs, managing the backlog, and resolving issues. See [pm-command.md](./pm-command.md) for full details.
+
+The `CliError` class is defined in `src/cli/command.ts`.
+
+```typescript
+// Pseudocode
+import { runCommand } from "./runCommand.js"
+import { watchCommand } from "./watchCommand.js"
+import { setupCommand } from "./setupCommand.js"
+
+export const root = Command.make("cuggino", {
+  version: Flag.boolean("version").pipe(Flag.withAlias("v"))
+}, (args) => {
+  // Default handler: start PM mode
+  // Build PM prompt, call LlmAgent.interactive()
+}).pipe(
+  Command.withDescription("Autonomous coder loop"),
+  Command.withSubcommands([runCommand, watchCommand, setupCommand])
+)
 ```
 
 ## `src/cli/runCommand.ts`
 
 Defines the `run` subcommand. Only has the `focus` flag (defined inline). Configuration options are read from `.cuggino.json` via `StorageService.readConfig()`.
-
-## `src/cli/planCommand.ts`
-
-Defines the `plan` subcommand. Takes no flags. Configuration options are read from `.cuggino.json` via `StorageService.readConfig()`.
 
 ## `src/cli/watchCommand.ts`
 
@@ -33,25 +53,6 @@ Defines the `watch` subcommand. Takes no flags. Configuration options are read f
 
 Defines the `setup` subcommand. Takes no flags — uses `Prompt` for interactive configuration.
 
-## `src/cli/command.ts`
-
-Defines the root `cuggino` command with the `version` flag (inline). Registers all four subcommands via `Command.withSubcommands`. Exports the composed root command.
-
-```typescript
-// Pseudocode
-import { runCommand } from "./runCommand.js"
-import { planCommand } from "./planCommand.js"
-import { watchCommand } from "./watchCommand.js"
-import { setupCommand } from "./setupCommand.js"
-
-export const root = Command.make("cuggino", {
-  version: Flag.boolean("version").pipe(Flag.withAlias("v"))
-}).pipe(
-  Command.withDescription("Autonomous coder loop"),
-  Command.withSubcommands([runCommand, planCommand, watchCommand, setupCommand])
-)
-```
-
 ## `src/cli.ts` — Entrypoint
 
 Imports the root command from `src/cli/command.ts`. Responsible for:
@@ -60,8 +61,6 @@ Imports the root command from `src/cli/command.ts`. Responsible for:
 2. Calling `Command.run` on the root command, providing layers, and running via `NodeRuntime.runMain`
 
 Configuration values are read directly from `.cuggino.json` via `StorageService.readConfig()` in each command handler, not through a config provider chain.
-
-The `CliError` class is defined in `src/cli/planCommand.ts` (the only command that uses it).
 
 ## What Does NOT Move
 

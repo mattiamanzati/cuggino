@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `cuggino watch` command continuously processes backlog items by running the coding loop for each one. When the backlog is empty, it watches for new items to appear. When a spec issue occurs, it waits for the user to resolve it before retrying.
+The `cuggino watch` command continuously processes backlog items by running the coding loop for each one. When the backlog is empty or spec issues are pending, it watches both folders reactively and waits for the right conditions before proceeding.
 
 ## Command
 
@@ -31,12 +31,10 @@ All events are defined as Effect Schema classes with a `_tag` field.
 
 | Event | Fields | Description |
 |-------|--------|-------------|
-| `WatchBacklogEmpty` | — | Backlog folder is empty, entering watch mode on backlog folder |
-| `WatchChangeDetected` | — | Filesystem change detected in a watched folder, starting debounce |
-| `WatchDebounceComplete` | — | Debounce period elapsed, re-checking folder |
+| `WatchSpecIssueWaiting` | — | Spec issues exist, waiting for them to be resolved |
+| `WatchBacklogWaiting` | — | No spec issues but backlog is empty, waiting for backlog items |
 | `WatchProcessingItem` | `filename: string` | Picking up a backlog item for processing |
 | `WatchItemCompleted` | `filename: string` | Backlog item processing finished (deleted from backlog) |
-| `WatchSpecIssueWaiting` | — | Spec issue detected, entering watch mode on spec-issues folder |
 | `WatchAuditStarted` | — | Audit agent spawned during idle time (only when `audit` is enabled in config) |
 | `WatchAuditEnded` | — | Audit agent finished on its own (no more findings to report) |
 | `WatchAuditInterrupted` | — | Audit agent was interrupted because work arrived (backlog item or spec issues resolved) |
@@ -62,18 +60,55 @@ The stream runs indefinitely (until interrupted). It interleaves:
 
 The watch service does **not** write to stdout directly. All output is handled by the CLI output layer (see [cli-output-formatting](./cli-output-formatting.md)).
 
+## File Count Stream
+
+The watching mechanism is built on a single primitive: a stream that tracks the number of files in a folder.
+
+### `watchFileCount(folder)`
+
+A stream that:
+
+1. Immediately emits the current number of files in the folder
+2. Watches the folder for filesystem changes
+3. On each change, starts a **30-second debounce timer** (resets on further changes)
+4. After debounce, re-counts files in the folder
+5. Only emits if the count changed from the last emission (deduplication)
+
+This stream runs indefinitely until interrupted.
+
+### Combined Waiting Stream
+
+The watch service combines two file count streams using a combinator (e.g., `zipLatest`):
+
+- `watchFileCount(specIssuesPath)` — tracks spec issue count
+- `watchFileCount(backlogPath)` — tracks backlog item count
+
+The combined stream emits pairs of `[specIssuesCount, backlogCount]`. The watch service consumes this stream until the condition `specIssuesCount === 0 && backlogCount > 0` is met.
+
+While consuming, the watch service emits events based on state transitions:
+
+- When `specIssuesCount > 0`: emit `WatchSpecIssueWaiting`
+- When `specIssuesCount === 0 && backlogCount === 0`: emit `WatchBacklogWaiting`
+
+Each event is emitted only on state transition (not re-emitted when counts change within the same logical state).
+
 ## Behavior
 
-The watch command operates as an infinite loop with two modes: **processing** and **watching**.
+The watch command operates as an infinite loop with two phases: **waiting** and **processing**.
 
-### Loop Entry
+### Waiting Phase
 
-At the top of each loop iteration, the watch command checks folders in this order:
+At the top of each loop iteration, the watch service enters the waiting phase using the combined file count stream:
 
-1. **Check spec-issues folder first** — if any spec issue files exist, enter watching mode on the spec-issues folder (do not process backlog items while spec issues are unresolved)
-2. **Check backlog folder** — if files exist, enter processing mode; if empty, enter watching mode on the backlog folder
+1. Combine `watchFileCount(specIssuesPath)` and `watchFileCount(backlogPath)`
+2. As counts arrive, emit the appropriate event (`WatchSpecIssueWaiting` or `WatchBacklogWaiting`) on state transitions
+3. If `audit` is enabled in config, spawn the audit agent in the background while waiting (see [Audit During Idle](#audit-during-idle))
+4. When the audit agent is running and the combined stream emits a change, **interrupt the audit agent**
+5. Once the condition `specIssuesCount === 0 && backlogCount > 0` is met, exit the waiting phase and proceed to processing
 
-### Processing Mode
+If the condition is already satisfied on the first emission (spec issues are clear and backlog has items), the waiting phase exits immediately without emitting any waiting events.
+
+### Processing Phase
 
 1. List files in the backlog folder, sorted by filename
 2. Pick the **first** file
@@ -83,24 +118,13 @@ At the top of each loop iteration, the watch command checks folders in this orde
 6. Run the coding loop (`LoopService.run()`) — all `LoopEvent`s from the inner loop are forwarded to the watch stream
 7. Handle the loop outcome (see below)
 
-### Watching Mode
-
-When there is nothing to process (backlog is empty, or waiting for spec issues to be resolved), the command watches the relevant folder for changes:
-
-1. Emit the appropriate event (`WatchBacklogEmpty` or `WatchSpecIssueWaiting`)
-2. If `audit` is enabled in config, spawn the audit agent in the background (see [Audit During Idle](#audit-during-idle))
-3. Watch the folder for filesystem changes
-4. Once a change is detected, **interrupt the audit agent** (if running), emit `WatchChangeDetected` and start a **30-second debounce timer**
-5. If another change occurs within 30 seconds, reset the timer
-6. After 30 seconds pass with no changes, emit `WatchDebounceComplete` and re-check the folder
-
 ## Loop Outcome Handling
 
 | Outcome | Action |
 |---------|--------|
 | **Approved** | Re-read the backlog file and compare its hash to the stored hash. If unchanged, delete the file and emit `WatchItemCompleted`. If changed, keep the file (it will be re-processed in the next iteration). |
 | **Max iterations reached** | Same as Approved — only delete if hash matches. |
-| **Spec issue** | Do NOT delete the backlog file (regardless of hash). The spec issue is persisted to `.cuggino/spec-issues/` (this already happens in the loop). Enter watching mode on the **spec-issues folder**, waiting for it to become empty. Once empty (after 30s debounce), restart the loop picking up the first backlog item. |
+| **Spec issue** | Do NOT delete the backlog file (regardless of hash). The spec issue is persisted to `.cuggino/spec-issues/` (this already happens in the loop). Return to the top of the loop — the waiting phase will detect the spec issue files and emit `WatchSpecIssueWaiting`. |
 
 ### Hash-Based Deletion
 
@@ -115,9 +139,12 @@ When the watch loop picks a backlog file, it stores the content hash. After the 
 When a spec issue occurs:
 
 1. The loop persists the issue to `.cuggino/spec-issues/` (existing behavior)
-2. The watch command emits `WatchSpecIssueWaiting` and starts watching the `spec-issues` folder
-3. The user resolves the issue via the `plan` command (which updates specs and deletes the issue file)
-4. Once the spec-issues folder is empty and 30 seconds have passed without changes, the watch command retries the same backlog item with a fresh loop
+2. The watch loop returns to the top, entering the waiting phase
+3. The combined file count stream detects spec issue files and emits `WatchSpecIssueWaiting`
+4. The user resolves the issue via `cuggino` (PM mode), which updates specs and deletes the issue file
+5. Once the spec-issues count drops to 0 and backlog count is > 0, the waiting phase exits and processing resumes
+
+**Important:** The backlog file is intentionally NOT deleted when a spec issue occurs. Since the watch service always picks the first file in alphabetical order, the same backlog item is naturally retried after the spec issue is resolved. This implicit coupling between "don't delete on spec issue" and "alphabetical ordering" is what makes retry work.
 
 ## Flow Diagram
 
@@ -128,69 +155,69 @@ When a spec issue occurs:
                   │
                   ▼
 ┌─────────────────────────────────────┐
-│    Check spec-issues folder         │◄──────────────────────┐
+│         Waiting Phase               │◄──────────────────────┐
 │                                     │                       │
-│   Has files?                        │                       │
-│     Yes → emit WatchSpecIssueWaiting│                       │
-│            watch spec-issues folder │──► (debounce 30s) ───┘
-│     No  → continue to backlog check │                       │
+│  Combine:                           │                       │
+│    watchFileCount(specIssues)        │                       │
+│    watchFileCount(backlog)           │                       │
+│                                     │                       │
+│  specIssues > 0?                    │                       │
+│    → emit WatchSpecIssueWaiting     │                       │
+│  specIssues == 0 && backlog == 0?   │                       │
+│    → emit WatchBacklogWaiting       │                       │
+│                                     │                       │
+│  (audit agent runs in background    │                       │
+│   while waiting, if enabled)        │                       │
+│                                     │                       │
+│  Exit when:                         │                       │
+│    specIssues == 0 && backlog > 0   │                       │
 └─────────────────────────────────────┘                       │
-                  │ (no spec issues)                           │
+                  │                                            │
                   ▼                                            │
 ┌─────────────────────────────────────┐                       │
-│       Check backlog folder          │                       │
-│                                     │                       │
-│   Has files?                        │                       │
-│     Yes → pick first by filename    │                       │
-│     No  → emit WatchBacklogEmpty    │                       │
-│           watch backlog folder      │──► (debounce 30s) ───┘
-└─────────────────────────────────────┘
-                  │ (has file)
-                  ▼
-┌─────────────────────────────────────┐
-│  Emit WatchProcessingItem           │
-│  Read backlog file content          │
-│  Run coding loop (forward events)   │
-└─────────────────────────────────────┘
-                  │
-        ┌─────────┴──────────┐
-        │                    │
-   Approved /           Spec Issue
-   Max Iterations            │
-        │                    ▼
-        ▼              Back to top
- Emit                  (spec issues will be
- WatchItemCompleted     caught at top of loop)
+│  Emit WatchProcessingItem           │                       │
+│  Read backlog file content          │                       │
+│  Run coding loop (forward events)   │                       │
+└─────────────────────────────────────┘                       │
+                  │                                            │
+        ┌─────────┴──────────┐                                │
+        │                    │                                 │
+   Approved /           Spec Issue                             │
+   Max Iterations            │                                 │
+        │                    ▼                                 │
+        ▼              Back to top ────────────────────────────┘
+ Emit                  (waiting phase will detect
+ WatchItemCompleted     spec issues via file count stream)
  Delete file                 │
         │                    │
         └────────►───────────┘
                   │
                   ▼
-          Back to top (check spec-issues, then backlog)
+          Back to top (waiting phase)
 ```
 
 ## Audit During Idle
 
-When `audit` is enabled in config, the watch command spawns an [audit agent](./audit-agent.md) during idle states (both empty backlog and spec-issue waiting).
+When `audit` is enabled in config, the watch command spawns an [audit agent](./audit-agent.md) during the waiting phase.
 
 ### Behavior
 
-1. When entering idle mode, emit `WatchAuditStarted` and spawn the audit agent via `LlmAgent.spawn()`
+1. When entering the waiting phase (and the condition is not immediately satisfied), emit `WatchAuditStarted` and spawn the audit agent via `LlmAgent.spawn()`
 2. The audit agent's event stream (including `LlmAgentEvent`s and `ToBeDiscussed` markers) is forwarded to the watch output stream
 3. When a `ToBeDiscussed` marker is detected:
    - Persist the content to `.cuggino/tbd/` via `StorageService.writeTbdItem()`
    - Emit `WatchTbdItemFound` with the content and filename
-4. When the audit agent finishes on its own, emit `WatchAuditEnded` — the folder watcher continues alone
-5. When the idle state ends (folder change detected), **interrupt the audit agent fiber** (kills the process) and emit `WatchAuditInterrupted`
-6. Continue with normal processing (backlog item or spec-issue re-check)
+4. When the audit agent finishes on its own, emit `WatchAuditEnded` — the file count stream continues alone
+5. When the waiting phase ends (condition met), **interrupt the audit agent fiber** (kills the process) and emit `WatchAuditInterrupted`
+6. Continue with processing
 
 ### Concurrency
 
-The audit agent and the folder watcher run concurrently. The implementation races between:
-- The folder watch completing (change detected)
+The audit agent and the file count streams run concurrently. The implementation races between:
+- The combined file count stream satisfying the exit condition
 - The audit agent stream (which runs indefinitely until interrupted or the agent finishes)
 
-When the folder watch wins the race, the audit agent fiber is interrupted and `WatchAuditInterrupted` is emitted. When the audit agent finishes on its own (ran out of things to find), `WatchAuditEnded` is emitted and the folder watch continues alone until a change is detected.
+When the file count condition is met first, the audit agent fiber is interrupted and `WatchAuditInterrupted` is emitted. When the audit agent finishes on its own (ran out of things to find), `WatchAuditEnded` is emitted and the file count stream continues alone until the exit condition is met.
 
 ### No Persistence of Partial Findings
 

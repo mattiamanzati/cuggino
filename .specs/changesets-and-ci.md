@@ -100,6 +100,7 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/setup
       - run: pnpm check
+      - run: pnpm test
       - run: pnpm build
       - name: Upgrade npm for OIDC support
         run: npm install -g npm@latest
@@ -115,7 +116,7 @@ jobs:
 
 ### Workflow Behavior
 
-- **On pull requests to `main`**: Runs `pnpm check` and `pnpm build` as CI validation
+- **On pull requests to `main`**: Runs `pnpm check`, `pnpm test`, and `pnpm build` as CI validation
 - **On push to `main`**: Runs CI checks, then the `changesets/action` either:
   - Creates a "Version Packages" PR if there are pending changesets (bumps version, updates CHANGELOG.md)
   - Publishes to npm if the "Version Packages" PR was just merged (no pending changesets, version already bumped)

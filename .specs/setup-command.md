@@ -57,7 +57,7 @@ See the `CugginoConfig` schema definition in [storage.md](./storage.md). The sch
 
 Configuration values are read directly from `.cuggino.json` via `StorageService.readConfig()` in each command handler. There are no CLI flag overrides — the config file is the single source of truth for these settings.
 
-Commands that need configuration (e.g., `run`, `watch`, `plan`) call `StorageService.readConfig()` at the start of their handler to get the current config values.
+Commands that need configuration (e.g., `run`, `watch`, and the default PM mode) call `StorageService.readConfig()` at the start of their handler to get the current config values.
 
 ## Implementation
 
