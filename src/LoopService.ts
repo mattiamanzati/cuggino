@@ -22,6 +22,8 @@ import {
   PlanningStart,
   ImplementingStart,
   ReviewingStart,
+  SetupCommandStarting,
+  CheckCommandStarting,
   SetupCommandOutput,
   CheckCommandOutput,
   LoopApproved,
@@ -314,6 +316,7 @@ export const LoopServiceLayer = Layer.effect(
 
               // Setup command (after planning, before implementation)
               if (opts.setupCommand) {
+                yield* Queue.offer(queue, new SetupCommandStarting({ iteration }))
                 const setupOutput = yield* runCheckCommand(opts.setupCommand, opts.cwd)
                 yield* Queue.offer(queue, new SetupCommandOutput({ iteration, output: setupOutput }))
               }
@@ -326,6 +329,7 @@ export const LoopServiceLayer = Layer.effect(
 
                 let checkOutput: string | undefined
                 if (opts.checkCommand) {
+                  yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
                   checkOutput = yield* runCheckCommand(opts.checkCommand, opts.cwd)
                   yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: checkOutput }))
                 }
@@ -381,6 +385,7 @@ export const LoopServiceLayer = Layer.effect(
 
               let reviewCheckOutput: string | undefined
               if (opts.checkCommand) {
+                yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
                 reviewCheckOutput = yield* runCheckCommand(opts.checkCommand, opts.cwd)
                 yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: reviewCheckOutput }))
               }

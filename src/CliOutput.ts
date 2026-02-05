@@ -203,6 +203,10 @@ export const formatLoopPhaseEvent = (event: LoopPhaseEvent): string => {
       return `\n${DIM}[Implementing] Starting...${RESET}`
     case "ReviewingStart":
       return `\n${DIM}[Reviewing] Starting...${RESET}`
+    case "SetupCommandStarting":
+      return `${DIM}[Setup] Running...${RESET}`
+    case "CheckCommandStarting":
+      return `${DIM}[Check] Running...${RESET}`
     case "SetupCommandOutput": {
       const truncatedSetup = event.output.length > 500
         ? event.output.slice(0, 500) + "..."
