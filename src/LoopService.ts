@@ -222,10 +222,26 @@ export const LoopServiceLayer = Layer.effect(
                 )
               )
 
-              if (Option.isNone(last) || !isLlmMarkerEvent(last.value) || !Schema.is(terminalSchema)(last.value)) {
+              if (Option.isNone(last)) {
                 return yield* new LoopError({
                   phase,
-                  message: `Non-terminal marker received from ${phase} agent`
+                  message: `Agent stream ended without emitting any marker`
+                })
+              }
+
+              if (!isLlmMarkerEvent(last.value)) {
+                const lastValue = last.value as Record<string, unknown>
+                const tag = "_tag" in lastValue ? String(lastValue._tag) : "unknown"
+                return yield* new LoopError({
+                  phase,
+                  message: `Agent stream ended without emitting a marker (last event: ${tag})`
+                })
+              }
+
+              if (!Schema.is(terminalSchema)(last.value)) {
+                return yield* new LoopError({
+                  phase,
+                  message: `Non-terminal marker received from ${phase} agent (got: ${last.value._tag})`
                 })
               }
 
