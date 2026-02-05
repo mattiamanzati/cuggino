@@ -16,23 +16,26 @@
     "test:watch": "vitest",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "ci": "pnpm run check && pnpm run test",
-"prepare": "effect-language-service patch"
+    "prepare": "effect-language-service patch"
   },
   "files": [
     "dist",
     "README.md"
   ],
-  "dependencies": {
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
-    "effect": "https://pkg.pr.new/Effect-TS/effect-smol/effect@6a720b2",
-    "@effect/platform-node": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node@6a720b2",
-    "uuid": "^11.0.0",
+    "@changesets/changelog-github": "^0.5.2",
+    "@changesets/cli": "^2.29.8",
     "@effect/language-service": "^0.72.1",
+    "@effect/platform-node": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node@6a720b2",
     "@types/node": "^25.0.6",
+    "effect": "https://pkg.pr.new/Effect-TS/effect-smol/effect@6a720b2",
     "tsdown": "^0.20.1",
     "tsx": "^4.0.0",
     "typescript": "^5.9.3",
+    "uuid": "^11.0.0",
     "vitest": "4.0.16"
   }
 }
