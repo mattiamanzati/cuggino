@@ -78,7 +78,8 @@ TBD ITEMS:
 - TBD items are LOWER PRIORITY than spec issues. Only suggest TBD items when there are no pending spec issues.
 - Whenever the current discussion reaches a natural stopping point and there are no spec issues, check "${opts.tbdPath}" for pending items.
 - If pending items exist, prompt the user to discuss one of them next.
-- To resolve a TBD item: update the relevant spec files in "${opts.specsPath}" based on the user's decision (or create backlog items if implementation is needed), then delete the TBD file from "${opts.tbdPath}".`
+- To resolve a TBD item: update the relevant spec files in "${opts.specsPath}" based on the user's decision (or create backlog items if implementation is needed), then delete the TBD file from "${opts.tbdPath}".
+- NEVER dismiss a TBD item about an implementation issue without asking the user. Even if the finding is about code (not specs), the user may want a backlog item created for it. Always present the finding and let the user decide: fix the spec, create a backlog item, or skip.`
 
 /**
  * System prompt for the planning agent.
