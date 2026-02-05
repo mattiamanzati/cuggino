@@ -12,577 +12,185 @@ The user provides a **focus** (a specific feature or issue from the specs) via C
 3. Reviews the implementation against specs
 4. Iterates until the implementation matches the specs
 
-## Agent Architecture
+## Agent Roles
 
 The system uses three types of agents in a loop:
 
 ### 1. Planning Agent
-- **Input**: Current codebase + specs + user-provided focus + (optional) code review
+- **Input**: Current codebase + specs + user-provided focus + (optional) code review from a previous iteration
 - **Purpose**: Investigate the codebase and specs, then create a detailed plan
-- **Code review source**: Can be from the reviewing agent (automated) or from a human (manual review)
 - **When code review provided**: Creates a new plan that satisfies both the review feedback and the specs
-- **Output**: A markdown file containing:
-  - Tasks to implement
-  - Implementation details
-  - Testing requirements
-- **Can emit**:
-  - `<SPEC_ISSUE>` if specs are unclear/inconsistent (exits loop)
-  - `<PLAN_COMPLETE>` when planning is finished (proceeds to implementation)
+- **Output**: A plan file containing tasks, implementation details, and testing requirements
+- **Can signal**: spec issue (exits loop) or plan complete (proceeds to implementation)
 
 ### 2. Implementing Agent
 - **Input**: The plan + current codebase + check output (if check command configured)
 - **Purpose**: Pick and implement **one task** from the plan
 - **Behavior**:
-  - Reads the plan and checks previous progress in the session file
+  - Reads the plan and checks previous progress in the session
   - Picks **one and only one** task to implement
   - Implements that task
-  - Emits **markers** to signal:
-    - `<NOTE>` - observations, findings, choices made during implementation
-    - `<SPEC_ISSUE>` - unclear or inconsistent specifications
-    - `<PROGRESS>` - the picked task is complete, leaves notes for future agents about remaining work
-    - `<DONE>` - all tasks in the plan are complete
-  - Exits after emitting `<PROGRESS>` or `<DONE>`
-- **Loop**:
-  - If `<PROGRESS>` → spawns another implementing agent to pick the next task
-  - If `<DONE>` → proceeds to reviewing agent
+  - Signals completion: either progress (more tasks remain) or done (all tasks complete)
+- **Loop**: If more tasks remain, a new implementing agent is spawned for the next task. When all tasks are done, the loop proceeds to review.
 
 ### 3. Reviewing Agent
-- **Input**: Specs + session file (contains plan + notes) + code changes + check output (if check command configured) + path to code review file + (optional) initial commit hash
+- **Input**: Specs + session (plan + notes) + code changes + check output (if check command configured) + (optional) initial commit hash
 - **Purpose**: Verify implementation matches **specs** (read-only, no code changes)
-- **When initial commit hash provided** (via `commit` config): The reviewer is instructed to focus on changes introduced since that commit, using `git diff <initial-hash>..HEAD` to understand the scope of changes
 - **Important**: The specs are the source of truth, not the plan. The plan is just a subset of tasks derived from specs.
-- **Can emit**:
-  - `<SPEC_ISSUE>` - specs are unclear/inconsistent (exits loop immediately)
-  - `<APPROVED>` - changes are correct according to specs (loop finishes, CLI exits)
-  - `<REQUEST_CHANGES>` - implementation doesn't match specs
-- **On request changes**: Writes a code review to the provided file path describing what doesn't match the specs and what needs to change.
-- **Output**:
-  - If `<APPROVED>` → loop finishes, CLI exits
-  - If `<REQUEST_CHANGES>` → code review written, loop back to planning agent
+- **When initial commit hash provided** (via `commit` config): Focuses review on changes introduced since that commit
+- **Outcome**:
+  - **Approved** — changes match specs, loop finishes
+  - **Request changes** — writes a code review describing what doesn't match, loop goes back to planning
+  - **Spec issue** — specs are unclear/inconsistent, loop exits
 
+## Markers
 
-## Marker System
-
-Agents emit markers using XML-style tags in their output stream. The system parses these in real-time.
-
-### Marker Format
-
-```
-<NOTE>
-Description of what was discovered or decided during implementation...
-</NOTE>
-
-<SPEC_ISSUE>
-The spec says X but doesn't clarify Y...
-</SPEC_ISSUE>
-
-<PROGRESS>
-Completed task X. Note for next agent: beware of Y...
-</PROGRESS>
-
-<DONE>
-All tasks in the plan have been implemented.
-</DONE>
-
-<PLAN_COMPLETE>
-Planning is complete, ready to implement.
-</PLAN_COMPLETE>
-
-<APPROVED>
-Implementation matches the specs correctly.
-</APPROVED>
-
-<REQUEST_CHANGES>
-The implementation doesn't match specs because...
-</REQUEST_CHANGES>
-
-<TO_BE_DISCUSSED>
-The spec says X but the code does Y, and it's unclear which is correct...
-</TO_BE_DISCUSSED>
-```
+Agents communicate progress and decisions by emitting markers in their output. The system parses these in real-time.
 
 ### Marker Types
 
-| Marker Tag | Purpose |
-|------------|---------|
-| `<NOTE>` | General observations, findings, and choices made by the agent |
-| `<SPEC_ISSUE>` | Signal unclear, ambiguous, or inconsistent specifications |
-| `<PROGRESS>` | Current task completed, more tasks remain in the plan |
-| `<DONE>` | All tasks in the plan have been implemented |
-| `<PLAN_COMPLETE>` | Planning finished, plan is ready for implementation |
-| `<APPROVED>` | Implementation matches specs, loop can finish |
-| `<REQUEST_CHANGES>` | Implementation doesn't match specs, new plan written |
-| `<TO_BE_DISCUSSED>` | Finding that needs human review (discrepancy, unclear spec, improvement) |
+| Marker | Meaning |
+|--------|---------|
+| `NOTE` | Observation, finding, or choice made during implementation |
+| `SPEC_ISSUE` | Specs are unclear, ambiguous, or inconsistent — loop exits immediately |
+| `PROGRESS` | Current task completed, more tasks remain |
+| `DONE` | All tasks in the plan have been implemented |
+| `PLAN_COMPLETE` | Planning finished, ready for implementation |
+| `APPROVED` | Implementation matches specs, loop can finish |
+| `REQUEST_CHANGES` | Implementation doesn't match specs, needs re-planning |
+| `TO_BE_DISCUSSED` | Finding that needs human review (used by audit agent only) |
 
-### Marker Availability
+### Which Agents Emit Which Markers
 
-| Marker Tag | Planning | Implementing | Reviewing | Audit |
-|------------|----------|--------------|-----------|-------|
-| `<NOTE>` | | ✓ | | |
-| `<SPEC_ISSUE>` | ✓ | ✓ | ✓ | |
-| `<PLAN_COMPLETE>` | ✓ | | | |
-| `<PROGRESS>` | | ✓ | | |
-| `<DONE>` | | ✓ | | |
-| `<APPROVED>` | | | ✓ | |
-| `<REQUEST_CHANGES>` | | | ✓ | |
-| `<TO_BE_DISCUSSED>` | | | | ✓ |
+| Marker | Planning | Implementing | Reviewing | Audit |
+|--------|----------|--------------|-----------|-------|
+| `NOTE` | | yes | | |
+| `SPEC_ISSUE` | yes | yes | yes | |
+| `PLAN_COMPLETE` | yes | | | |
+| `PROGRESS` | | yes | | |
+| `DONE` | | yes | | |
+| `APPROVED` | | | yes | |
+| `REQUEST_CHANGES` | | | yes | |
+| `TO_BE_DISCUSSED` | | | | yes |
 
 ### Spec Issue Handling
 
-When any agent emits `<SPEC_ISSUE>`, the loop **exits immediately**. No further agents are spawned. The system waits for human intervention to clarify or fix the specification before the loop can be restarted.
+When any agent emits a spec issue, the loop **exits immediately**. No further agents are spawned. The system waits for human intervention to clarify or fix the specification before the loop can be restarted.
 
 ## Setup Command
 
-After each planning phase completes, the system can optionally run a setup command to prepare the environment before implementation begins (e.g., installing dependencies, running builds, database migrations).
+After each planning phase completes, the system can optionally run a setup command to prepare the environment before implementation begins (e.g., installing dependencies, running builds).
 
-### Default Behavior
-
-- **Optional**: Setup only runs if `setupCommand` is configured in `.cuggino.json`
-- **No default**: If `setupCommand` is not set, the setup phase is skipped entirely
-- **Customizable**: Users can set `setupCommand` in `.cuggino.json` via `cuggino setup`
-
-### Setup Output Handling
-
-When a setup command is configured:
-
-- The setup command's stdout and stderr are captured
-- A `SetupCommandOutput` event is emitted with the captured output (for CLI display)
-- **Setup failure does NOT stop the loop** — the loop continues to the implementation phase regardless
-- The setup output is NOT passed to agents as context (unlike check output, which is diagnostic)
-
-When no setup command is configured:
-
-- The setup phase is skipped — no process is spawned, no `SetupCommandOutput` event is emitted
-
-### When Setup Runs
-
-| Phase | Setup Runs? |
-|-------|-------------|
-| After Planning Agent (first run) | Only if `setupCommand` is configured |
-| After Planning Agent (re-plan from review) | Only if `setupCommand` is configured |
-| Before Implementing Agent iterations | No (setup runs once after planning, not before each iteration) |
-| Before Reviewing Agent | No |
+- **Optional**: Only runs if `setupCommand` is configured in `.cuggino.json`
+- **Announced**: A "starting" event is emitted before the command runs, so the user knows what's happening
+- **Failure is non-blocking**: The loop continues to implementation regardless of setup outcome
+- **Runs once per planning phase**: Not repeated for each implementing agent iteration
 
 ## Check Command
 
 Before each implementing agent iteration and before the reviewing agent, the system can optionally run a check command to verify the codebase state (linting, type checking, tests, etc.).
 
-### Default Behavior
+- **Optional**: Only runs if `checkCommand` is configured in `.cuggino.json`
+- **Announced**: A "starting" event is emitted before the command runs, so the user knows what's happening
+- **Output is passed to the agent**: The agent can use check failures to understand what needs fixing
+- **Failure is non-blocking**: The loop continues — check output (including errors) is context for the agent
 
-- **Optional**: Check only runs if `checkCommand` is configured in `.cuggino.json`
-- **No default**: If `checkCommand` is not set, the check phase is skipped entirely
-- **Customizable**: Users can set `checkCommand` in `.cuggino.json` via `cuggino setup`
+### When Setup and Check Run
 
-### Check Output Handling
-
-When a check command is configured:
-
-- The check command's stdout and stderr are captured
-- Output is passed to the agent (implementing or reviewing) as context
-- **Check failure does NOT stop the loop** - the output (including errors) is passed to the agent
-- The agent can use check failures to understand what needs fixing
-
-When no check command is configured:
-
-- The check phase is skipped — no process is spawned
-- Agents receive no check output (the `CheckCommandOutput` event is not emitted)
-
-### When Check Runs
-
-| Phase | Check Runs? |
-|-------|-------------|
-| Before Planning Agent | No |
-| Before each Implementing Agent iteration | Only if `checkCommand` is configured |
-| Before Reviewing Agent | Only if `checkCommand` is configured |
-
-### CLI Usage
-
-```bash
-# Run with focus (check command configured in .cuggino.json)
-cuggino run --focus "Add feature X"
-```
-
-The `setupCommand`, `checkCommand`, and `commit` options are configured in `.cuggino.json` via `cuggino setup`.
+| Phase | Setup? | Check? |
+|-------|--------|--------|
+| Before Planning Agent | No | No |
+| After Planning Agent | Yes (if configured) | No |
+| Before each Implementing Agent iteration | No | Yes (if configured) |
+| Before Reviewing Agent | No | Yes (if configured) |
 
 ## Auto-Commit
 
 When the `commit` option is enabled in `.cuggino.json`, the loop automatically commits all changed files after each implementing agent invocation. This creates a checkpoint of progress after each task.
 
-### Behavior
-
-After each implementing agent finishes (emitting `<PROGRESS>` or `<DONE>`):
-
-1. Run `git add -A` to stage all changes (new, modified, deleted) **excluding the configured specs folder** (e.g., `git add -A -- . ':!.specs'` using git pathspec exclude syntax)
-2. Run `git commit` with the content of the `<PROGRESS>` or `<DONE>` marker as the commit message
-3. Emit a `CommitPerformed` loop phase event
-
-The commit happens immediately after the implementing agent, before the loop continues (next implementing agent iteration, or review phase).
-
-### Initial Commit Capture
-
-When `commit` is enabled in config, the loop captures the current HEAD commit hash **before any changes are made** (at the very start of the loop, before the first planning agent). This hash is stored and later passed to the reviewing agent so it can focus its review on the changes introduced since that baseline.
-
-If the repository has no commits yet, the initial hash is `null` and the reviewer falls back to its default behavior (reviewing the full codebase).
-
-### Edge Cases
-
-- If there are no changes to commit (no staged changes after `git add -A`), skip the commit and do not emit `CommitPerformed`
-- If the git commit fails for any reason, the loop continues — the commit failure does not stop the loop. A `CommitFailed` event is emitted instead.
-
-### Configuration
-
-The `commit` option is configured in `.cuggino.json` and applies to both `run` and `watch` commands:
-
-```json
-{
-  "commit": true
-}
-```
+- After each implementing agent finishes, all changes are staged and committed (excluding the specs folder)
+- The marker content (progress note or done summary) is used as the commit message
+- The initial HEAD commit hash is captured before the loop starts, so the reviewer can focus on changes introduced since that baseline
+- If there are no changes to commit, the commit is skipped
+- If the commit fails, the loop continues (the failure is reported but does not stop the loop)
+- If the repository has no commits yet, the reviewer falls back to reviewing the full codebase
 
 ## Main Loop Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         CLI Start                                │
-│                    (user provides focus)                         │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Planning Agent                              │
-│         (reads codebase + specs, creates plan)                   │
-│                                                                  │
-│   <SPEC_ISSUE> ──────────────────────────────────► EXIT (error)  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│               Run Setup Command (if configured)                  │
-│              (install deps, build, etc.)                          │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   Implementation Loop                            │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │                    Run Check Command                          │  │
-│  │              (capture output for agent)                    │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                              │                                   │
-│                              ▼                                   │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │              Implementing Agent                            │  │
-│  │    (executes tasks, receives check output)                 │  │
-│  │                                                            │  │
-│  │   <SPEC_ISSUE> ────────────────────────────► EXIT (error)  │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                              │                                   │
-│              ┌───────────────┴───────────────┐                  │
-│              │                               │                   │
-│         <PROGRESS>                        <DONE>                 │
-│              │                               │                   │
-│              ▼                               ▼                   │
-│         (if commit enabled: git add -A && git commit)            │
-│              │                               │                   │
-│              ▼                               ▼                   │
-│      spawn new agent                    exit loop                │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       Run Check Command                             │
-│                 (capture output for agent)                       │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     Reviewing Agent                              │
-│   (verifies implementation, receives check output)               │
-│                                                                  │
-│   <SPEC_ISSUE> ──────────────────────────────────► EXIT (error)  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┴───────────────┐
-              │                               │
-         <APPROVED>                   <REQUEST_CHANGES>
-              │                               │
-              ▼                               ▼
-┌─────────────────────┐         ┌─────────────────────────────────┐
-│     CLI Exit        │         │   Writes code review            │
-│     (success)       │         │   (what doesn't match specs)    │
-└─────────────────────┘         └─────────────────────────────────┘
-                                              │
-                                              ▼
-                                    back to Planning Agent
-                                    (with code review as input)
+                         CLI Start
+                    (user provides focus)
+                              |
+                              v
+                      Planning Agent
+         (reads codebase + specs, creates plan)
+           SPEC_ISSUE --> EXIT (error)
+                              |
+                              v
+               Run Setup Command (if configured)
+                              |
+                              v
+                   Implementation Loop
+                 +---------------------------+
+                 |  Run Check (if configured) |
+                 |            |               |
+                 |            v               |
+                 |  Implementing Agent        |
+                 |  (executes one task)       |
+                 |  SPEC_ISSUE --> EXIT       |
+                 |            |               |
+                 |     PROGRESS --> commit    |
+                 |     (if enabled) then      |
+                 |     spawn next agent       |
+                 |            |               |
+                 |     DONE --> commit         |
+                 |     (if enabled) then      |
+                 |     exit loop              |
+                 +---------------------------+
+                              |
+                              v
+                 Run Check (if configured)
+                              |
+                              v
+                     Reviewing Agent
+       (verifies implementation matches specs)
+           SPEC_ISSUE --> EXIT (error)
+                              |
+               +--------------+--------------+
+               |                             |
+          APPROVED                   REQUEST_CHANGES
+               |                             |
+               v                             v
+          CLI Exit                  Writes code review
+          (success)                 (what doesn't match)
+                                             |
+                                             v
+                                  Back to Planning Agent
+                                  (with code review as input)
 ```
 
 ## Configuration
 
-Project settings are stored in `.cuggino.json`, created and updated interactively via `cuggino setup` (see [setup-command spec](./setup-command.md)).
+Project settings are stored in `.cuggino.json`, created and updated interactively via `cuggino setup` (see [setup-command spec](./setup-command.md)). The config file is the single source of truth — there are no CLI flag overrides for configuration options. See [storage spec](./storage.md) for the config schema and folder structure.
 
-The config file is parsed with Effect Schema. Configuration values (`specsPath`, `maxIterations`, `setupCommand`, `checkCommand`, `commit`, `audit`) are read directly from the file via `StorageService.readConfig()` in each command handler. There are no CLI flags for these options — the config file is the single source of truth.
+## Sessions
 
-## Storage
+Each loop run is tracked in a **session** — an append-only file that starts with the plan and accumulates progress notes and markers as agents work. Sessions are identified by UUIDv7 and stored in `.cuggino/wip/`. Session files are automatically cleaned up when the session ends (whether approved, spec issue, or max iterations reached).
 
-All persistent data is stored under `.cuggino/` relative to the current working directory. See [storage spec](./storage.md) for the full folder structure and `StorageService` details.
-
-## Session Files
-
-Each session is identified by a **UUIDv7**, which provides:
-- Time-ordered sorting (UUIDv7 embeds a timestamp)
-- Uniqueness without coordination
-- URL-safe format
-
-Session files live in `.cuggino/wip/`.
-
-### Session File (`.cuggino/wip/<uuid>.md`)
-
-A simple append-only file:
-- Starts with the plan at the top
-- After the plan, a `# Progress Log` heading separates plan content from runtime markers
-- Markers are appended to the end as they are emitted
-
-```markdown
-# Plan
-
-## Tasks
-- [ ] Task 1 description
-- [ ] Task 2 description
-- ...
-
-## Implementation Details
-...
-
-# Progress Log
-
-<NOTE>
-Something discovered during implementation...
-</NOTE>
-
-<PROGRESS>
-Completed task 1. Note: the utility function was placed in src/utils.ts.
-</PROGRESS>
-
-<NOTE>
-Another observation...
-</NOTE>
-
-<DONE>
-All tasks implemented.
-</DONE>
-```
-
-### Review File (`.cuggino/wip/<uuid>.review.md`)
-
-A separate file created by the reviewing agent when emitting `<REQUEST_CHANGES>`. Contains the code review describing what doesn't match the specs.
-
-This file is then fed to the planning agent on the next iteration.
-
-### File Creation Flow
-
-1. **Planning phase**: Planning agent writes plan to a temporary file (`.cuggino/wip/<uuid>.plan.md`)
-2. **After planning exits**: System moves content to `.cuggino/wip/<uuid>.md`
-3. **Implementation phase**: Markers appended to end of session file
-4. **Review phase**: If `<REQUEST_CHANGES>`, review written to `.cuggino/wip/<uuid>.review.md`
-
-### Session Cleanup
-
-Session files are **deleted upon session completion**. This includes:
-- The session file (`.cuggino/wip/<uuid>.md`)
-- The review file (`.cuggino/wip/<uuid>.review.md`) if it exists
-- The temporary plan file (`.cuggino/wip/<uuid>.plan.md`)
-
-Session files are only useful during the active loop. Once the session ends (whether by `<APPROVED>`, `<SPEC_ISSUE>`, or max iterations reached), the files are cleaned up automatically.
+A separate review file may be created alongside the session when the reviewer requests changes — this is fed back to the planning agent on the next iteration.
 
 ## Technology Stack
 
-- **Effect CLI** for command-line interface
-- **Effect** for the core runtime and service architecture
+- **Effect** for the core runtime, CLI, and service architecture (v4 / effect-smol)
 - **Claude Code CLI** for agent execution (spawned as child processes)
+- **pnpm** as the package manager
+- **Node.js** as the runtime platform
 
-### Effect v4 Dependencies
+### Agent Execution
 
-This project uses Effect v4 (effect-smol). All platform modules are now consolidated into the `effect` package, with platform-specific implementations in separate packages.
+Agents are executed by spawning `claude` CLI processes. There are two modes:
 
-**Package manager:** pnpm
+- **Streaming mode** — for the autonomous loop agents (planning, implementing, reviewing, audit). The output is parsed in real-time to detect markers and track progress. Events are formatted and displayed to the user.
+- **Interactive mode** — for PM mode (the default command). The user talks to the agent directly in their terminal. No stream parsing or event system.
 
-**Required packages:**
-```
-effect                  - Core Effect library (includes CLI, ChildProcess, etc.)
-@effect/platform-node   - Node.js platform implementation
-```
-
-**Installation (from PR builds):**
-```bash
-pnpm add https://pkg.pr.new/Effect-TS/effect-smol/effect@6a720b2
-pnpm add https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node@6a720b2
-```
-
-**Import paths:**
-- `effect` - Core types, Effect, Stream, Schema, etc.
-- `effect/unstable` - Unstable APIs like ChildProcess, CLI
-- `@effect/platform-node` - Node.js services layer
-
-## Agent Execution
-
-Agents are executed by spawning `claude` CLI processes. Each agent type receives a specific system prompt and the relevant context (specs, plan, codebase access).
-
-**Important:** The **Claude CLI process** must be spawned using **Node.js native `child_process` module** (e.g., `child_process.spawn`), not the Effect `ChildProcess` module from `effect/unstable`. The Effect `ChildProcess` module has known issues with streaming output from long-running processes. The native Node.js spawn is wrapped in Effect for integration with the rest of the system, but the actual process management uses Node directly.
-
-**Other short-lived commands** (check commands, git operations, etc.) may use the Effect `ChildProcess` module from `effect/unstable`. The native `child_process` requirement only applies to the Claude CLI, which is a long-running streaming process.
-
-### LlmAgent Service
-
-The `LlmAgent` service exposes two methods:
-
-- **`spawn`** — Non-interactive, streaming mode. Returns a stream of parsed events. Used by the autonomous coding loop (planning, implementing, reviewing agents).
-- **`interactive`** — Interactive mode. Inherits stdio so the user talks directly to the agent in the terminal. Returns the process exit code. Used by PM mode (the default command).
-
-### LlmAgentSpawnOptions
-
-Options passed to the `LlmAgent.spawn()` method:
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `cwd` | `string` | Yes | Current working directory for the agent |
-| `prompt` | `string` | Yes | The prompt to send to the agent |
-| `systemPrompt` | `string` | No | Appended system prompt (`--append-system-prompt`) |
-| `dangerouslySkipPermissions` | `boolean` | No | Skip permission checks (`--dangerously-skip-permissions`) |
-| `sessionId` | `string` | No | Start a new session with this ID (`--session-id <value>`) |
-| `resumeSessionId` | `string` | No | Resume an existing session by ID (`--resume <value>`) |
-
-The output stream from Claude Code is parsed in real-time to:
-- Detect markers emitted by the agent
-- Track progress and task completion
-- Capture findings and decisions for later review
-
-### LlmAgentInteractiveOptions
-
-Options passed to the `LlmAgent.interactive()` method:
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `cwd` | `string` | Yes | Current working directory for the agent |
-| `systemPrompt` | `string` | No | Appended system prompt (`--append-system-prompt`) |
-| `dangerouslySkipPermissions` | `boolean` | No | Skip permission checks (`--dangerously-skip-permissions`) |
-
-The interactive method spawns the agent process with inherited stdio (`stdin`, `stdout`, `stderr` connected to the user's terminal). There is no stream parsing, no event system — the user interacts with the agent directly. The method returns `Effect.Effect<number, LlmSessionError>` where the success value is the process exit code.
-
-### LlmAgentEvent Stream
-
-The agent's output is represented as an Effect `Stream` of events (only for `spawn`, not `interactive`):
-
-```typescript
-Stream.Stream<LlmAgentEvent, LlmSessionError>
-```
-
-**Event Types:**
-
-| Event | Description |
-|-------|-------------|
-| `SystemMessage` | System initialization or status message |
-| `AgentMessage` | Text output from the LLM agent |
-| `ToolCall` | Agent requesting to execute a tool |
-| `ToolResult` | Result from tool execution |
-| `PingEvent` | Activity heartbeat - indicates the agent is still working |
-
-**Error Handling:**
-
-- When the Claude process completes successfully, the stream simply ends
-- When the Claude process encounters an error, the stream fails with `LlmSessionError`
-- Errors are in the stream's error channel, not as events in the success channel
-
-### Marker Extraction
-
-When markers are detected in the agent's text output, the marker extraction layer:
-1. Parses the marker tags from the `AgentMessage` text
-2. Emits the corresponding marker event (e.g., `Note`, `Done`, `Approved`)
-3. Removes the marker text from the `AgentMessage` to avoid duplicate display
-
-This means the CLI will not print the raw marker tags - only the formatted marker display.
-
-### Event Category System
-
-All events use **TypeId symbols** in the class body to identify their category. This allows code to check event categories without enumerating all `_tag` values.
-
-**Category symbols:**
-
-| Symbol | Applied to |
-|--------|-----------|
-| `LlmAgentEventTypeId` | All `LlmAgentEvent` classes |
-| `LlmMarkerEventTypeId` | All `LlmMarkerEvent` classes |
-| `LlmTerminalMarkerEventTypeId` | Terminal markers only (`SpecIssue`, `PlanComplete`, `Progress`, `Done`, `Approved`, `RequestChanges`) — `ToBeDiscussed` is NOT terminal |
-| `LoopPhaseEventTypeId` | All `LoopPhaseEvent` classes |
-| `LoopTerminalEventTypeId` | Terminal loop events only (`LoopApproved`, `LoopSpecIssue`, `LoopMaxIterations`) |
-| `WatchLoopEventTypeId` | All `WatchLoopEvent` classes |
-
-**Type guards:**
-- `isLlmAgentEvent(event)` — checks `LlmAgentEventTypeId in event`
-- `isLlmMarkerEvent(event)` — checks `LlmMarkerEventTypeId in event`
-- `isLlmTerminalMarkerEvent(event)` — checks `LlmTerminalMarkerEventTypeId in event`
-- `isLoopPhaseEvent(event)` — checks `LoopPhaseEventTypeId in event`
-- `isLoopTerminalEvent(event)` — checks `LoopTerminalEventTypeId in event`
-- `isWatchLoopEvent(event)` — checks `WatchLoopEventTypeId in event`
-
-### Loop Stream
-
-The `LoopService.run()` returns a `Stream` of events:
-
-```typescript
-Stream.Stream<LoopEvent, LoopError | SessionError>
-```
-
-Where `LoopEvent` is the union of all event types:
-
-```typescript
-type LoopEvent = LlmAgentEvent | LlmMarkerEvent | LoopPhaseEvent
-```
-
-**Loop phase events** (all defined as Effect Schema classes with an `iteration` field):
-
-| Event | Description |
-|-------|-------------|
-| `IterationStart` | New iteration beginning (includes `maxIterations`) |
-| `PlanningStart` | Planning phase starting |
-| `ImplementingStart` | Implementation phase starting |
-| `ReviewingStart` | Review phase starting |
-| `SetupCommandOutput` | Setup command output captured (only when `setupCommand` configured) |
-| `CheckCommandOutput` | Check command output captured (only when `checkCommand` configured) |
-| `LoopApproved` | Implementation approved (terminal) |
-| `LoopSpecIssue` | Spec issue found (terminal). Includes `content` and `filename` (persisted to `.cuggino/spec-issues/`) |
-| `LoopMaxIterations` | Max iterations reached (terminal) |
-| `CommitPerformed` | Auto-commit succeeded (only when `commit` enabled in config). Includes `commitHash` and `message`. |
-| `CommitFailed` | Auto-commit failed (only when `commit` enabled in config). Includes `message` (error details). |
-
-The stream **ends immediately** after emitting a terminal `LoopPhaseEvent`.
-
-### PrintableEvent
-
-The CLI output layer operates on `PrintableEvent`, which is a union of all event types that can be formatted:
-
-```typescript
-type PrintableEvent = LoopEvent | WatchLoopEvent
-```
-
-This allows the same formatting pipeline to handle both coding loop events and watch service events.
-
-### CLI Output
-
-The `withCliOutput` stream combinator wraps any `PrintableEvent` stream to add CLI formatting as a side effect:
-- Accepts `Stream<PrintableEvent>` (or any subtype, e.g. `Stream<LoopEvent>`)
-- Manages spinner state internally
-- Formats and prints each event to stdout using the appropriate formatter
-- Passes all events through unchanged
-- Optional — can be omitted in tests for pure event assertions
-
-### Watch Stream
-
-The `WatchService.run()` returns a `Stream` of `WatchEvent`:
-
-```typescript
-type WatchEvent = LoopEvent | WatchLoopEvent
-```
-
-The stream runs indefinitely, interleaving `WatchLoopEvent`s (watch-level state transitions) with `LoopEvent`s (forwarded from inner coding loop runs). The watch service does not write to stdout directly — all output is handled by wrapping the stream with `withCliOutput` at the CLI entrypoint. See [watch-command spec](./watch-command.md) for details.
+**Important:** The Claude CLI process must be spawned using Node.js native `child_process` module, not the Effect `ChildProcess` module (which has known issues with streaming output from long-running processes). Other short-lived commands (check commands, git operations) may use the Effect `ChildProcess` module.

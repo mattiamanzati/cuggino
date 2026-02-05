@@ -2,95 +2,15 @@
 
 ## Overview
 
-The `cuggino watch` command continuously processes backlog items by running the coding loop for each one. When the backlog is empty or spec issues are pending, it watches both folders reactively and waits for the right conditions before proceeding.
+The `cuggino watch` command continuously processes backlog items by running the coding loop for each one. When the backlog is empty or spec issues are pending, it waits and watches for changes before proceeding.
 
 ## Command
 
 ```bash
-# Start watching
 cuggino watch
 ```
 
-### Options
-
-No CLI options. All configuration options (`specsPath`, `maxIterations`, `checkCommand`, `commit`, `audit`) are read from `.cuggino.json` via `StorageService.readConfig()` and passed to `WatchService.run()`. See [setup-command](./setup-command.md) for details.
-
-## WatchLoopEvent
-
-The watch service emits its own event type, `WatchLoopEvent`, to communicate watch-level state changes. These events are emitted on the watch stream alongside the inner `LoopEvent`s from each coding loop run.
-
-### TypeId
-
-`WatchLoopEvent` uses a `WatchLoopEventTypeId` symbol (`Symbol.for("WatchLoopEvent")`) in the class body, following the same pattern as `LoopPhaseEventTypeId`.
-
-**Type guard:** `isWatchLoopEvent(event)` — checks `WatchLoopEventTypeId in event`
-
-### Event Types
-
-All events are defined as Effect Schema classes with a `_tag` field.
-
-| Event | Fields | Description |
-|-------|--------|-------------|
-| `WatchSpecIssueWaiting` | — | Spec issues exist, waiting for them to be resolved |
-| `WatchBacklogWaiting` | — | No spec issues but backlog is empty, waiting for backlog items |
-| `WatchProcessingItem` | `filename: string` | Picking up a backlog item for processing |
-| `WatchItemCompleted` | `filename: string` | Backlog item processing finished (deleted from backlog) |
-| `WatchAuditStarted` | — | Audit agent spawned during idle time (only when `audit` is enabled in config) |
-| `WatchAuditEnded` | — | Audit agent finished on its own (no more findings to report) |
-| `WatchAuditInterrupted` | — | Audit agent was interrupted because work arrived (backlog item or spec issues resolved) |
-| `WatchTbdItemFound` | `content: string`, `filename: string` | A to-be-discussed item was found and persisted to `.cuggino/tbd/` |
-
-## Watch Stream
-
-`WatchService.run()` returns a `Stream` instead of an `Effect<never>`:
-
-```typescript
-Stream.Stream<WatchEvent, WatchError, ...>
-```
-
-Where `WatchEvent` is:
-
-```typescript
-type WatchEvent = LoopEvent | WatchLoopEvent
-```
-
-The stream runs indefinitely (until interrupted). It interleaves:
-- **WatchLoopEvents** for watch-level state transitions
-- **LoopEvents** from the inner coding loop (passed through as-is)
-
-The watch service does **not** write to stdout directly. All output is handled by the CLI output layer (see [cli-output-formatting](./cli-output-formatting.md)).
-
-## File Count Stream
-
-The watching mechanism is built on a single primitive: a stream that tracks the number of files in a folder.
-
-### `watchFileCount(folder)`
-
-A stream that:
-
-1. Immediately emits the current number of files in the folder
-2. Watches the folder for filesystem changes
-3. On each change, starts a **30-second debounce timer** (resets on further changes)
-4. After debounce, re-counts files in the folder
-5. Only emits if the count changed from the last emission (deduplication)
-
-This stream runs indefinitely until interrupted.
-
-### Combined Waiting Stream
-
-The watch service combines two file count streams using a combinator (e.g., `zipLatest`):
-
-- `watchFileCount(specIssuesPath)` — tracks spec issue count
-- `watchFileCount(backlogPath)` — tracks backlog item count
-
-The combined stream emits pairs of `[specIssuesCount, backlogCount]`. The watch service consumes this stream until the condition `specIssuesCount === 0 && backlogCount > 0` is met.
-
-While consuming, the watch service emits events based on state transitions:
-
-- When `specIssuesCount > 0`: emit `WatchSpecIssueWaiting`
-- When `specIssuesCount === 0 && backlogCount === 0`: emit `WatchBacklogWaiting`
-
-Each event is emitted only on state transition (not re-emitted when counts change within the same logical state).
+No CLI options. All configuration is read from `.cuggino.json` via `StorageService.readConfig()`. See [setup-command](./setup-command.md) for details.
 
 ## Behavior
 
@@ -98,133 +18,143 @@ The watch command operates as an infinite loop with two phases: **waiting** and 
 
 ### Waiting Phase
 
-At the top of each loop iteration, the watch service enters the waiting phase using the combined file count stream:
+At the top of each loop iteration, the watch service checks whether it can proceed:
 
-1. Combine `watchFileCount(specIssuesPath)` and `watchFileCount(backlogPath)`
-2. As counts arrive, emit the appropriate event (`WatchSpecIssueWaiting` or `WatchBacklogWaiting`) on state transitions
-3. If `audit` is enabled in config, spawn the audit agent in the background while waiting (see [Audit During Idle](#audit-during-idle))
-4. When the audit agent is running and the combined stream emits a change, **interrupt the audit agent**
-5. Once the condition `specIssuesCount === 0 && backlogCount > 0` is met, exit the waiting phase and proceed to processing
+- **Spec issues exist** — waits for them to be resolved (emits "spec issue waiting" once)
+- **Backlog empty and no spec issues** — waits for backlog items to arrive (emits "backlog empty" once)
+- **Backlog has items and no spec issues** — proceeds to processing immediately
 
-If the condition is already satisfied on the first emission (spec issues are clear and backlog has items), the waiting phase exits immediately without emitting any waiting events.
+The watch service monitors both the spec-issues and backlog folders reactively for filesystem changes. When files are added or removed, the service re-evaluates the condition after a debounce period (to avoid reacting to partial writes). Events are emitted only on state transitions — not repeated when file counts change within the same logical state.
+
+If `audit` is enabled in config, the [audit agent](./audit-agent.md) runs in the background during the waiting phase. See [Audit During Idle](#audit-during-idle).
 
 ### Processing Phase
 
 1. List files in the backlog folder, sorted by filename
-2. Pick the **first** file
-3. Emit `WatchProcessingItem` with the filename
-4. Pass `@${filePath}` as the **focus** for the coding loop (the `@` prefix lets the Claude CLI read the file content)
-5. Compute and store a hash of the file content using `Hash.string` from Effect
-6. Run the coding loop (`LoopService.run()`) — all `LoopEvent`s from the inner loop are forwarded to the watch stream
-7. Handle the loop outcome (see below)
+2. Pick the **first** file (alphabetical order determines priority)
+3. Emit a "processing item" event
+4. Run the coding loop with the backlog file content as the focus
+5. Handle the loop outcome (see below)
 
 ## Loop Outcome Handling
 
 | Outcome | Action |
 |---------|--------|
-| **Approved** | Re-read the backlog file and compare its hash to the stored hash. If unchanged, delete the file and emit `WatchItemCompleted`. If changed, keep the file (it will be re-processed in the next iteration). |
-| **Max iterations reached** | Same as Approved — only delete if hash matches. |
-| **Spec issue** | Do NOT delete the backlog file (regardless of hash). The spec issue is persisted to `.cuggino/spec-issues/` (this already happens in the loop). Return to the top of the loop — the waiting phase will detect the spec issue files and emit `WatchSpecIssueWaiting`. |
+| **Approved** | Delete the backlog file (if unchanged during the loop) and emit "item completed". Return to waiting phase. |
+| **Max iterations reached** | Same as approved — delete the file if unchanged. |
+| **Spec issue** | Do NOT delete the backlog file. The spec issue is persisted to `.cuggino/spec-issues/`. Return to waiting phase — the watcher will detect the spec issue files and wait for resolution. |
 
-### Hash-Based Deletion
+### Safe Deletion
 
-When the watch loop picks a backlog file, it stores the content hash. After the coding loop completes (Approved or Max Iterations), it re-reads the file and compares hashes before deleting:
+When the watch loop picks a backlog file, it remembers the file content. After the coding loop completes, it re-reads the file and compares:
 
-- **Hash matches**: The file was not modified during the loop. Safe to delete.
-- **Hash differs**: The file was edited while the loop was running (e.g., user refined the task). Keep the file so it gets picked up and re-processed on the next iteration.
-- **File no longer exists**: Someone already deleted it. No action needed.
+- **Content unchanged** — safe to delete (the task was processed as-is)
+- **Content changed** — keep the file (someone edited the task while the loop was running; it will be re-processed next iteration)
+- **File no longer exists** — no action needed (someone already deleted it)
 
 ### Spec Issue Recovery
 
 When a spec issue occurs:
 
-1. The loop persists the issue to `.cuggino/spec-issues/` (existing behavior)
-2. The watch loop returns to the top, entering the waiting phase
-3. The combined file count stream detects spec issue files and emits `WatchSpecIssueWaiting`
+1. The loop persists the issue to `.cuggino/spec-issues/`
+2. The watch loop returns to the waiting phase
+3. The watcher detects spec issue files and emits "spec issue waiting"
 4. The user resolves the issue via `cuggino` (PM mode), which updates specs and deletes the issue file
-5. Once the spec-issues count drops to 0 and backlog count is > 0, the waiting phase exits and processing resumes
+5. Once spec issues are cleared and backlog has items, processing resumes
 
-**Important:** The backlog file is intentionally NOT deleted when a spec issue occurs. Since the watch service always picks the first file in alphabetical order, the same backlog item is naturally retried after the spec issue is resolved. This implicit coupling between "don't delete on spec issue" and "alphabetical ordering" is what makes retry work.
+The backlog file is intentionally kept when a spec issue occurs. Since the watch service always picks the first file alphabetically, the same item is naturally retried after the issue is resolved.
 
 ## Flow Diagram
 
 ```
-┌─────────────────────────────────────┐
-│            Watch Start              │
-└─────────────────────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────┐
-│         Waiting Phase               │◄──────────────────────┐
-│                                     │                       │
-│  Combine:                           │                       │
-│    watchFileCount(specIssues)        │                       │
-│    watchFileCount(backlog)           │                       │
-│                                     │                       │
-│  specIssues > 0?                    │                       │
-│    → emit WatchSpecIssueWaiting     │                       │
-│  specIssues == 0 && backlog == 0?   │                       │
-│    → emit WatchBacklogWaiting       │                       │
-│                                     │                       │
-│  (audit agent runs in background    │                       │
-│   while waiting, if enabled)        │                       │
-│                                     │                       │
-│  Exit when:                         │                       │
-│    specIssues == 0 && backlog > 0   │                       │
-└─────────────────────────────────────┘                       │
-                  │                                            │
-                  ▼                                            │
-┌─────────────────────────────────────┐                       │
-│  Emit WatchProcessingItem           │                       │
-│  Read backlog file content          │                       │
-│  Run coding loop (forward events)   │                       │
-└─────────────────────────────────────┘                       │
-                  │                                            │
-        ┌─────────┴──────────┐                                │
-        │                    │                                 │
-   Approved /           Spec Issue                             │
-   Max Iterations            │                                 │
-        │                    ▼                                 │
-        ▼              Back to top ────────────────────────────┘
- Emit                  (waiting phase will detect
- WatchItemCompleted     spec issues via file count stream)
- Delete file                 │
-        │                    │
-        └────────►───────────┘
-                  │
-                  ▼
-          Back to top (waiting phase)
+              Watch Start
+                  |
+                  v
+          Waiting Phase  <---------------------+
+                                                |
+   spec issues > 0?                             |
+     --> wait for resolution                    |
+   spec issues == 0 && backlog == 0?            |
+     --> wait for backlog items                 |
+   (audit runs in background if enabled)        |
+                                                |
+   Exit when: no spec issues && backlog > 0     |
+                  |                             |
+                  v                             |
+          Processing Phase                      |
+   Pick first backlog file                      |
+   Run coding loop (forward events)             |
+                  |                             |
+        +---------+----------+                  |
+        |                    |                  |
+   Approved /           Spec Issue              |
+   Max Iterations            |                  |
+        |                    v                  |
+        v              Back to top -------------+
+   Delete file         (watcher detects
+   (if unchanged)       spec issue files)
+        |
+        v
+   Back to top (waiting phase)
 ```
 
 ## Audit During Idle
 
-When `audit` is enabled in config, the watch command spawns an [audit agent](./audit-agent.md) during the waiting phase.
+When `audit` is enabled in config, the watch command spawns an [audit agent](./audit-agent.md) in the background while in the waiting phase.
 
-### Behavior
+- The audit agent's activity (tool calls, reasoning, findings) is displayed in the terminal alongside the waiting events
+- When the audit agent discovers a finding, it is persisted to `.cuggino/tbd/` and a "TBD item found" event is emitted
+- When the waiting phase ends (work arrives), the audit agent is **interrupted** — any in-progress work is discarded, but findings already persisted are kept
+- When the audit agent finishes on its own (no more findings), the waiting phase continues watching for file changes
+- Each idle period starts a fresh audit run (no resumption from previous runs)
 
-1. When entering the waiting phase (and the condition is not immediately satisfied), emit `WatchAuditStarted` and spawn the audit agent via `LlmAgent.spawn()`
-2. The audit agent's event stream (including `LlmAgentEvent`s and `ToBeDiscussed` markers) is forwarded to the watch output stream
-3. When a `ToBeDiscussed` marker is detected:
-   - Persist the content to `.cuggino/tbd/` via `StorageService.writeTbdItem()`
-   - Emit `WatchTbdItemFound` with the content and filename
-4. When the audit agent finishes on its own, emit `WatchAuditEnded` — the file count stream continues alone
-5. When the waiting phase ends (condition met), **interrupt the audit agent fiber** (kills the process) and emit `WatchAuditInterrupted`
-6. Continue with processing
+## System Notifications
 
-### Concurrency
+When `notify` is set to a notification method other than `none` in config, the watch command sends notifications when entering an idle state. This lets the user switch away from the terminal and be alerted when attention is needed.
 
-The audit agent and the file count streams run concurrently. The implementation races between:
-- The combined file count stream satisfying the exit condition
-- The audit agent stream (which runs indefinitely until interrupted or the agent finishes)
+### Notification Methods
 
-When the file count condition is met first, the audit agent fiber is interrupted and `WatchAuditInterrupted` is emitted. When the audit agent finishes on its own (ran out of things to find), `WatchAuditEnded` is emitted and the file count stream continues alone until the exit condition is met.
+| Value | Description |
+|-------|-------------|
+| `none` | No notifications (default) |
+| `osx-notification` | macOS notification via `terminal-notifier` with sound and best-effort click-to-focus |
 
-### No Persistence of Partial Findings
+### `osx-notification`
 
-If the audit agent is interrupted mid-marker (e.g., it was in the middle of emitting a `<TO_BE_DISCUSSED>` tag), that partial finding is lost. Only fully emitted and parsed markers are persisted. This is acceptable — the finding will likely be rediscovered on the next audit run.
+Uses [`terminal-notifier`](https://github.com/julienXX/terminal-notifier) to send native macOS notifications. The tool must be installed on the system (e.g., `brew install terminal-notifier`). If `terminal-notifier` is not found, the notification is silently skipped (no error, no crash).
+
+#### Triggers
+
+| State | Title | Body |
+|-------|-------|------|
+| Backlog empty | `{repo-name}` | Work is complete, waiting for you |
+| Spec issue waiting | `{repo-name}` | A spec issue needs to be resolved before continuing |
+
+Where `{repo-name}` is the Git repository name (e.g., `cuggino`), detected from the working directory at startup. If the project is not a Git repository, the folder name is used instead.
+
+#### Sound
+
+The notification plays a sound (`-sound default`) to alert the user, even if they are not looking at the screen.
+
+#### Click Behavior (Best-Effort)
+
+Clicking the notification attempts to bring the editor to the foreground. The `-execute` flag runs an AppleScript that activates the editor application and raises the window whose title contains the repo name. The simpler `-activate` approach does not work reliably with all editors (e.g., Cursor).
+
+This may not work in all environments. If clicking does nothing or focuses the wrong window, the sound and notification text still serve their purpose as an alert.
+
+#### Grouping
+
+Notifications use a group ID derived from the working directory via `-group` (e.g., `cuggino:/Users/me/projects/myapp`) so that each new notification replaces the previous one for the same project. This prevents notification stacking while keeping notifications from different projects independent.
+
+#### Persistence
+
+The notification is requested as an alert (stays until manually dismissed). Whether this is honored depends on the user's OS notification settings — the OS has final say on alert vs. banner behavior.
+
+### Relationship to Terminal Bell
+
+The terminal bell on backlog-empty events is independent and always active. When `notify` is set, both the bell and the notification fire.
 
 ## Lifecycle
 
 - The watch command runs indefinitely until terminated by the user (Ctrl+C)
-- On shutdown, any running coding loop is interrupted gracefully
-- The command uses `StorageService` to resolve backlog and spec-issues folder paths
+- On shutdown, any running coding loop or audit agent is interrupted gracefully

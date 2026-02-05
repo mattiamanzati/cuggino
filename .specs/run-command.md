@@ -2,12 +2,11 @@
 
 ## Overview
 
-The `cuggino run` command executes a single coding loop for a given focus. It is the primary entrypoint for the autonomous coding loop. The command reads config and passes it to `LoopService.run()`, streams the events through CLI output formatting, and exits when the loop completes.
+The `cuggino run` command executes a single coding loop for a given focus. It is the primary entrypoint for the autonomous coding loop.
 
 ## Command
 
 ```bash
-# Run with a focus
 cuggino run --focus "Implement user authentication"
 ```
 
@@ -21,16 +20,15 @@ All other configuration options (`specsPath`, `maxIterations`, `setupCommand`, `
 
 ## Behavior
 
-1. Read the `focus` flag value from the CLI
-2. Read configuration (`specsPath`, `maxIterations`, `setupCommand`, `checkCommand`, `commit`) from `.cuggino.json` via `StorageService.readConfig()`
-3. Call `LoopService.run()` with the focus, config values, and `cwd: "."`
-4. Pipe the returned `Stream<LoopEvent>` through `withCliOutput` for formatting and display
-5. Drain the stream (`Stream.runDrain`)
-6. Exit when the stream ends (loop completed)
+1. Read the `focus` flag value
+2. Read configuration from `.cuggino.json`
+3. Run the coding loop with the given focus
+4. Display events as they occur (see [cli-output-formatting](./cli-output-formatting.md))
+5. Exit when the loop completes
 
 ## Exit Behavior
 
-The run command does not manage exit codes explicitly. The Effect returned by the command handler either succeeds or fails, and `NodeRuntime.runMain` (in `src/cli.ts`) translates that into the process exit code.
+The command exits when the loop finishes — whether by approval, spec issue, or max iterations. The process exit code reflects whether the loop succeeded or failed.
 
 ## Differences from Watch Command
 
