@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import pkg from "../package.json" with { type: "json" }
 import { Effect, Layer } from "effect"
 import { Command } from "effect/unstable/cli"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
@@ -22,7 +23,7 @@ const servicesLayer = WatchServiceLayer.pipe(
 )
 
 root.pipe(
-  Command.run({ version: "0.0.1" }),
+  Command.run({ version: pkg.version }),
   Effect.provide(servicesLayer),
   NodeRuntime.runMain
 )
