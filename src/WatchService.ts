@@ -9,9 +9,7 @@ import { auditSystemPrompt, auditPrompt } from "./AgentPrompts.js"
 import { ToBeDiscussed } from "./LlmMarkerEvent.js"
 import { extractMarkers, type MarkerExtractorConfig } from "./extractMarkers.js"
 import {
-  WatchBacklogEmpty,
-  WatchChangeDetected,
-  WatchDebounceComplete,
+  WatchBacklogWaiting,
   WatchProcessingItem,
   WatchItemCompleted,
   WatchSpecIssueWaiting,
@@ -63,87 +61,31 @@ const listSorted = (fs: FileSystem.FileSystem, dir: string): Effect.Effect<Array
   )
 
 /**
- * Wait for 30s of silence after a change.
- * If another change occurs within the debounce window, reset the timer.
+ * Count visible (non-hidden) files in a directory.
+ * Returns 0 if directory doesn't exist or can't be read.
  */
-const debounceWatch = (fs: FileSystem.FileSystem, dir: string, debounceMs: number): Effect.Effect<void, WatchError> =>
-  Effect.gen(function*() {
-    let settled = false
-    while (!settled) {
-      const result = yield* Effect.race(
-        fs.watch(dir).pipe(Stream.take(1), Stream.runDrain, Effect.map(() => "change" as const)),
-        Effect.sleep(debounceMs).pipe(Effect.map(() => "timeout" as const))
-      )
-      if (result === "timeout") {
-        settled = true
-      }
-    }
-  }).pipe(
-    Effect.mapError((cause) =>
-      new WatchError({ message: `Debounce watch failed on ${dir}`, cause })
-    )
+const countFiles = (fs: FileSystem.FileSystem, dir: string): Effect.Effect<number> =>
+  fs.readDirectory(dir).pipe(
+    Effect.map((files) => files.filter((f) => !f.startsWith(".")).length),
+    Effect.catch(() => Effect.succeed(0))
   )
 
 /**
- * Watch a directory for changes, debounce for 30s, then return.
- * Emits WatchLoopEvents to the provided queue.
+ * Stream that tracks the number of visible files in a directory.
+ * Emits the initial count immediately, then debounced updates on changes.
+ * Consecutive identical counts are deduplicated.
  */
-const watchForChanges = (
-  fs: FileSystem.FileSystem,
-  dir: string,
-  queue: Queue.Queue<WatchEvent, WatchError | Cause.Done<void>>
-): Effect.Effect<void, WatchError> =>
-  Effect.gen(function*() {
-    yield* Queue.offer(queue, new WatchBacklogEmpty({}))
-
-    yield* fs.watch(dir).pipe(
-      Stream.take(1),
-      Stream.runDrain
-    )
-
-    yield* Queue.offer(queue, new WatchChangeDetected({}))
-    yield* debounceWatch(fs, dir, 30_000)
-    yield* Queue.offer(queue, new WatchDebounceComplete({}))
-  }).pipe(
-    Effect.mapError((cause) =>
-      cause instanceof WatchError
-        ? cause
-        : new WatchError({ message: `Watch failed on ${dir}`, cause })
-    )
+const watchFileCount = (fs: FileSystem.FileSystem, dir: string): Stream.Stream<number, WatchError> => {
+  const initial = Stream.fromEffect(countFiles(fs, dir))
+  const onChange = fs.watch(dir).pipe(
+    Stream.debounce("30 seconds"),
+    Stream.mapEffect(() => countFiles(fs, dir))
   )
-
-/**
- * Watch the spec-issues folder until it becomes empty (with debounce).
- * Emits WatchLoopEvents to the provided queue.
- */
-const watchUntilEmpty = (
-  fs: FileSystem.FileSystem,
-  dir: string,
-  queue: Queue.Queue<WatchEvent, WatchError | Cause.Done<void>>
-): Effect.Effect<void, WatchError> =>
-  Effect.gen(function*() {
-    yield* Queue.offer(queue, new WatchSpecIssueWaiting({}))
-
-    while (true) {
-      yield* fs.watch(dir).pipe(Stream.take(1), Stream.runDrain)
-
-      yield* Queue.offer(queue, new WatchChangeDetected({}))
-      yield* debounceWatch(fs, dir, 30_000)
-      yield* Queue.offer(queue, new WatchDebounceComplete({}))
-
-      const files = yield* fs.readDirectory(dir)
-      const visibleFiles = files.filter((f) => !f.startsWith("."))
-      if (visibleFiles.length === 0) {
-        return
-      }
-    }
-  }).pipe(
-    Effect.mapError((cause) =>
-      cause instanceof WatchError
-        ? cause
-        : new WatchError({ message: `Watch failed on ${dir}`, cause })
-    )
+  return Stream.concat(initial, onChange).pipe(
+    Stream.changes,
+    Stream.mapError((cause) => new WatchError({ message: `Watch failed on ${dir}`, cause }))
   )
+}
 
 const auditMarkerConfig: MarkerExtractorConfig<{
   TO_BE_DISCUSSED: ToBeDiscussed
@@ -241,35 +183,51 @@ export const WatchServiceLayer = Layer.effect(
         Stream.callback<WatchEvent, WatchError, ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService>((queue) =>
           Effect.gen(function*() {
             while (true) {
-              // Check for spec issues first
-              const specIssueFiles = yield* listSorted(fs, storage.specIssuesDir)
-              if (specIssueFiles.length > 0) {
-                yield* withAuditDuringIdle(
-                  watchUntilEmpty(fs, storage.specIssuesDir, queue),
-                  opts.audit ?? false,
-                  agent,
-                  storage,
-                  queue,
-                  opts.specsPath
-                )
-                continue
-              }
+              // Waiting phase: combine file count streams and wait until ready
+              const combined = Stream.zipLatest(
+                watchFileCount(fs, storage.specIssuesDir),
+                watchFileCount(fs, storage.backlogDir)
+              )
 
-              // Check backlog
+              const waitingPhase = Effect.gen(function*() {
+                let prevState: "spec-issue" | "backlog-empty" | null = null
+
+                yield* combined.pipe(
+                  Stream.takeUntil(([specCount, backlogCount]) =>
+                    specCount === 0 && backlogCount > 0
+                  ),
+                  Stream.runForEach(([specCount, backlogCount]) =>
+                    Effect.gen(function*() {
+                      if (specCount > 0) {
+                        if (prevState !== "spec-issue") {
+                          yield* Queue.offer(queue, new WatchSpecIssueWaiting({}))
+                          prevState = "spec-issue"
+                        }
+                      } else if (backlogCount === 0) {
+                        if (prevState !== "backlog-empty") {
+                          yield* Queue.offer(queue, new WatchBacklogWaiting({}))
+                          prevState = "backlog-empty"
+                        }
+                      }
+                      // specCount === 0 && backlogCount > 0: exit condition, handled by takeUntil
+                    })
+                  )
+                )
+              })
+
+              yield* withAuditDuringIdle(
+                waitingPhase,
+                opts.audit ?? false,
+                agent,
+                storage,
+                queue,
+                opts.specsPath
+              )
+
+              // Processing phase: pick first backlog file
               const backlogFiles = yield* listSorted(fs, storage.backlogDir)
-              if (backlogFiles.length === 0) {
-                yield* withAuditDuringIdle(
-                  watchForChanges(fs, storage.backlogDir, queue),
-                  opts.audit ?? false,
-                  agent,
-                  storage,
-                  queue,
-                  opts.specsPath
-                )
-                continue
-              }
+              if (backlogFiles.length === 0) continue
 
-              // Pick first file, read content, run loop
               const firstFile = backlogFiles[0]
               const filePath = pathService.join(storage.backlogDir, firstFile)
 
@@ -292,7 +250,7 @@ export const WatchServiceLayer = Layer.effect(
                 commit: opts.commit
               }).pipe(
                 Stream.runForEach((event) =>
-                  Effect.sync(() => { 
+                  Effect.sync(() => {
                     Queue.offerUnsafe(queue, event)
                     if(isLoopTerminalEvent(event)) {
                       terminalEvents.push(event)

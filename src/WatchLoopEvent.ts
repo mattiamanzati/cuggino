@@ -3,20 +3,8 @@ import { Schema } from "effect"
 export const WatchLoopEventTypeId: unique symbol = Symbol.for("WatchLoopEvent")
 export type WatchLoopEventTypeId = typeof WatchLoopEventTypeId
 
-export class WatchBacklogEmpty extends Schema.Class<WatchBacklogEmpty>("WatchBacklogEmpty")({
-  _tag: Schema.tag("WatchBacklogEmpty")
-}) {
-  [WatchLoopEventTypeId]: WatchLoopEventTypeId = WatchLoopEventTypeId
-}
-
-export class WatchChangeDetected extends Schema.Class<WatchChangeDetected>("WatchChangeDetected")({
-  _tag: Schema.tag("WatchChangeDetected")
-}) {
-  [WatchLoopEventTypeId]: WatchLoopEventTypeId = WatchLoopEventTypeId
-}
-
-export class WatchDebounceComplete extends Schema.Class<WatchDebounceComplete>("WatchDebounceComplete")({
-  _tag: Schema.tag("WatchDebounceComplete")
+export class WatchBacklogWaiting extends Schema.Class<WatchBacklogWaiting>("WatchBacklogWaiting")({
+  _tag: Schema.tag("WatchBacklogWaiting")
 }) {
   [WatchLoopEventTypeId]: WatchLoopEventTypeId = WatchLoopEventTypeId
 }
@@ -68,9 +56,7 @@ export class WatchTbdItemFound extends Schema.Class<WatchTbdItemFound>("WatchTbd
 }
 
 export type WatchLoopEvent =
-  | WatchBacklogEmpty
-  | WatchChangeDetected
-  | WatchDebounceComplete
+  | WatchBacklogWaiting
   | WatchProcessingItem
   | WatchItemCompleted
   | WatchSpecIssueWaiting

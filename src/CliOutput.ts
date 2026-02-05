@@ -233,12 +233,8 @@ export const formatLoopPhaseEvent = (event: LoopPhaseEvent): string => {
  */
 export const formatWatchLoopEvent = (event: WatchLoopEvent): string => {
   switch (event._tag) {
-    case "WatchBacklogEmpty":
-      return `${DIM}[Watch] Backlog empty, watching for new items...${RESET}\x07`
-    case "WatchChangeDetected":
-      return `${DIM}[Watch] Change detected, debouncing...${RESET}`
-    case "WatchDebounceComplete":
-      return `${DIM}[Watch] Debounce complete, checking folder...${RESET}`
+    case "WatchBacklogWaiting":
+      return `${DIM}[Watch] Backlog empty, waiting for new items...${RESET}\x07`
     case "WatchProcessingItem":
       return `${DIM}[Watch] Processing: ${event.filename}${RESET}`
     case "WatchItemCompleted":
