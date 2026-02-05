@@ -105,13 +105,14 @@ interface StorageServiceShape {
 
 ## CugginoConfig Schema
 
-The config file is parsed and validated using an Effect Schema. All fields are optional with defaults:
+The config file is parsed and validated using an Effect Schema. Most fields are optional with defaults; `setupCommand` and `checkCommand` are truly optional (absent means "skip"):
 
 ```typescript
 const CugginoConfig = Schema.Struct({
   specsPath: Schema.String.pipe(Schema.withDecodingDefaultKey(() => ".specs")),
   maxIterations: Schema.Number.pipe(Schema.withDecodingDefaultKey(() => 10)),
-  checkCommand: Schema.String.pipe(Schema.withDecodingDefaultKey(() => "pnpm check && pnpm test")),
+  setupCommand: Schema.optionalKey(Schema.String),
+  checkCommand: Schema.optionalKey(Schema.String),
   commit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false)),
   audit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false))
 })
@@ -119,7 +120,7 @@ const CugginoConfig = Schema.Struct({
 type CugginoConfig = typeof CugginoConfig.Type
 ```
 
-`withDecodingDefaultKey` makes each key optional in the JSON — if the key is missing, the default is used. This means a completely empty `{}` file (or missing file) produces a valid config with all defaults.
+`withDecodingDefaultKey` makes each key optional in the JSON — if the key is missing, the default is used. `optionalKey` makes the key truly optional — if absent, the decoded value is `undefined` (no default). This means a completely empty `{}` file (or missing file) produces a valid config with defaults for most fields and `undefined` for `setupCommand`/`checkCommand`.
 
 This schema is defined in `StorageService.ts` (or a shared types file) and used by both `StorageService` (for reading/writing) and the config provider loading logic.
 

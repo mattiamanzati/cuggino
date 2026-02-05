@@ -17,12 +17,6 @@ src/
     command.ts            # Root command with subcommands registered
 ```
 
-## `src/cli/flags.ts` — Shared Flags
-
-This file is no longer needed. All configuration options (`specsPath`, `maxIterations`, `checkCommand`, `commit`, `audit`) are read exclusively from `.cuggino.json` via `StorageService.readConfig()`. There are no shared CLI flags.
-
-The `focus` flag is only used by the `run` command, so it is defined inline in `runCommand.ts`. The `version` flag is defined inline in `command.ts`.
-
 ## `src/cli/runCommand.ts`
 
 Defines the `run` subcommand. Only has the `focus` flag (defined inline). Configuration options are read from `.cuggino.json` via `StorageService.readConfig()`.
@@ -67,7 +61,7 @@ Imports the root command from `src/cli/command.ts`. Responsible for:
 
 Configuration values are read directly from `.cuggino.json` via `StorageService.readConfig()` in each command handler, not through a config provider chain.
 
-The `CliError` class also stays in `src/cli.ts` (or moves to the command file that uses it — `planCommand.ts`).
+The `CliError` class is defined in `src/cli/planCommand.ts` (the only command that uses it).
 
 ## What Does NOT Move
 

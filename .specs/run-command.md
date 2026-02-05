@@ -17,12 +17,12 @@ cuggino run --focus "Implement user authentication"
 |--------|---------|-------------|
 | `--focus` / `-f` | (required) | The focus area to work on — a specific feature or task from the specs |
 
-All other configuration options (`specsPath`, `maxIterations`, `checkCommand`, `commit`) are read from `.cuggino.json`. See [setup-command](./setup-command.md) for details.
+All other configuration options (`specsPath`, `maxIterations`, `setupCommand`, `checkCommand`, `commit`) are read from `.cuggino.json`. See [setup-command](./setup-command.md) for details.
 
 ## Behavior
 
 1. Read the `focus` flag value from the CLI
-2. Read configuration (`specsPath`, `maxIterations`, `checkCommand`, `commit`) from `.cuggino.json` via `StorageService.readConfig()`
+2. Read configuration (`specsPath`, `maxIterations`, `setupCommand`, `checkCommand`, `commit`) from `.cuggino.json` via `StorageService.readConfig()`
 3. Call `LoopService.run()` with the focus, config values, and `cwd: "."`
 4. Pipe the returned `Stream<LoopEvent>` through `withCliOutput` for formatting and display
 5. Drain the stream (`Stream.runDrain`)

@@ -30,7 +30,6 @@ Formats raw agent events. Returns `null` for `PingEvent` (handled by spinner).
 |-------|-------|--------|
 | `SystemMessage` | Dim | `[System] {text}` |
 | `AgentMessage` | Dim | `{text}` |
-| `UserMessage` | Dim | `[User] {text}` |
 | `ToolCall` | Dim Cyan (`\x1b[2;36m`) | `▶ {name}: {parameter summary}` |
 | `ToolResult` | Dim | Line-numbered output (truncated) |
 | `PingEvent` | — | Returns `null` (spinner handles this) |
@@ -83,6 +82,7 @@ Formats loop orchestration events. All events are rendered here — there is no 
 | `PlanningStart` | Dim | `[Planning] Starting...` |
 | `ImplementingStart` | Dim | `[Implementing] Starting...` |
 | `ReviewingStart` | Dim | `[Reviewing] Starting...` |
+| `SetupCommandOutput` | Dim | `[Setup] Output:\n{truncated output}` |
 | `CheckCommandOutput` | Dim | `[Check] Output:\n{truncated output}` |
 | `LoopApproved` | Bold Green | `[Loop] Implementation approved!` |
 | `LoopSpecIssue` | Bold Red | `[Loop] Spec issue: {content}\nSaved to: {filename}` |
@@ -210,6 +210,7 @@ I'll analyze the codebase structure...
 ```
 [Loop] === Iteration 1/10 ===
 [Planning] Starting...
+[Setup] Output: (truncated)
 [Implementing] Starting...
 [Check] Output: (truncated)
 ```

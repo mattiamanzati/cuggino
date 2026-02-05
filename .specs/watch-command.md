@@ -78,7 +78,7 @@ At the top of each loop iteration, the watch command checks folders in this orde
 1. List files in the backlog folder, sorted by filename
 2. Pick the **first** file
 3. Emit `WatchProcessingItem` with the filename
-4. Read its content — this becomes the **focus** for the coding loop
+4. Pass `@${filePath}` as the **focus** for the coding loop (the `@` prefix lets the Claude CLI read the file content)
 5. Compute and store a hash of the file content using `Hash.string` from Effect
 6. Run the coding loop (`LoopService.run()`) — all `LoopEvent`s from the inner loop are forwarded to the watch stream
 7. Handle the loop outcome (see below)

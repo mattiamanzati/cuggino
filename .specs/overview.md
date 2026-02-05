@@ -30,7 +30,7 @@ The system uses three types of agents in a loop:
   - `<PLAN_COMPLETE>` when planning is finished (proceeds to implementation)
 
 ### 2. Implementing Agent
-- **Input**: The plan + current codebase + check output
+- **Input**: The plan + current codebase + check output (if check command configured)
 - **Purpose**: Pick and implement **one task** from the plan
 - **Behavior**:
   - Reads the plan and checks previous progress in the session file
@@ -47,7 +47,7 @@ The system uses three types of agents in a loop:
   - If `<DONE>` → proceeds to reviewing agent
 
 ### 3. Reviewing Agent
-- **Input**: Specs + notes + task plan + code changes + check output + path to code review file + (optional) initial commit hash
+- **Input**: Specs + session file (contains plan + notes) + code changes + check output (if check command configured) + path to code review file + (optional) initial commit hash
 - **Purpose**: Verify implementation matches **specs** (read-only, no code changes)
 - **When initial commit hash provided** (via `commit` config): The reviewer is instructed to focus on changes introduced since that commit, using `git diff <initial-hash>..HEAD` to understand the scope of changes
 - **Important**: The specs are the source of truth, not the plan. The plan is just a subset of tasks derived from specs.
@@ -131,30 +131,69 @@ The spec says X but the code does Y, and it's unclear which is correct...
 
 When any agent emits `<SPEC_ISSUE>`, the loop **exits immediately**. No further agents are spawned. The system waits for human intervention to clarify or fix the specification before the loop can be restarted.
 
-## Check Command
+## Setup Command
 
-Before each implementing agent iteration and before the reviewing agent, the system runs a check command to verify the codebase state (linting, type checking, tests, etc.).
+After each planning phase completes, the system can optionally run a setup command to prepare the environment before implementation begins (e.g., installing dependencies, running builds, database migrations).
 
 ### Default Behavior
 
-- **Default command**: `pnpm check && pnpm test`
-- **Always enabled**: Check runs automatically before implementing and reviewing agents
-- **Customizable**: Users can set `checkCommand` in `.cuggino.json`
+- **Optional**: Setup only runs if `setupCommand` is configured in `.cuggino.json`
+- **No default**: If `setupCommand` is not set, the setup phase is skipped entirely
+- **Customizable**: Users can set `setupCommand` in `.cuggino.json` via `cuggino setup`
+
+### Setup Output Handling
+
+When a setup command is configured:
+
+- The setup command's stdout and stderr are captured
+- A `SetupCommandOutput` event is emitted with the captured output (for CLI display)
+- **Setup failure does NOT stop the loop** — the loop continues to the implementation phase regardless
+- The setup output is NOT passed to agents as context (unlike check output, which is diagnostic)
+
+When no setup command is configured:
+
+- The setup phase is skipped — no process is spawned, no `SetupCommandOutput` event is emitted
+
+### When Setup Runs
+
+| Phase | Setup Runs? |
+|-------|-------------|
+| After Planning Agent (first run) | Only if `setupCommand` is configured |
+| After Planning Agent (re-plan from review) | Only if `setupCommand` is configured |
+| Before Implementing Agent iterations | No (setup runs once after planning, not before each iteration) |
+| Before Reviewing Agent | No |
+
+## Check Command
+
+Before each implementing agent iteration and before the reviewing agent, the system can optionally run a check command to verify the codebase state (linting, type checking, tests, etc.).
+
+### Default Behavior
+
+- **Optional**: Check only runs if `checkCommand` is configured in `.cuggino.json`
+- **No default**: If `checkCommand` is not set, the check phase is skipped entirely
+- **Customizable**: Users can set `checkCommand` in `.cuggino.json` via `cuggino setup`
 
 ### Check Output Handling
+
+When a check command is configured:
 
 - The check command's stdout and stderr are captured
 - Output is passed to the agent (implementing or reviewing) as context
 - **Check failure does NOT stop the loop** - the output (including errors) is passed to the agent
 - The agent can use check failures to understand what needs fixing
 
+When no check command is configured:
+
+- The check phase is skipped — no process is spawned
+- Agents receive no check output (the `CheckCommandOutput` event is not emitted)
+
 ### When Check Runs
 
 | Phase | Check Runs? |
 |-------|-------------|
 | Before Planning Agent | No |
-| Before each Implementing Agent iteration | Yes |
-| Before Reviewing Agent | Yes |
+| Before each Implementing Agent iteration | Only if `checkCommand` is configured |
+| Before Reviewing Agent | Only if `checkCommand` is configured |
 
 ### CLI Usage
 
@@ -163,7 +202,7 @@ Before each implementing agent iteration and before the reviewing agent, the sys
 cuggino run --focus "Add feature X"
 ```
 
-The `checkCommand` and `commit` options are configured in `.cuggino.json` via `cuggino setup`.
+The `setupCommand`, `checkCommand`, and `commit` options are configured in `.cuggino.json` via `cuggino setup`.
 
 ## Auto-Commit
 
@@ -214,6 +253,12 @@ The `commit` option is configured in `.cuggino.json` and applies to both `run` a
 │         (reads codebase + specs, creates plan)                   │
 │                                                                  │
 │   <SPEC_ISSUE> ──────────────────────────────────► EXIT (error)  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│               Run Setup Command (if configured)                  │
+│              (install deps, build, etc.)                          │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -277,7 +322,7 @@ The `commit` option is configured in `.cuggino.json` and applies to both `run` a
 
 Project settings are stored in `.cuggino.json`, created and updated interactively via `cuggino setup` (see [setup-command spec](./setup-command.md)).
 
-The config file is parsed with Effect Schema. Configuration values (`specsPath`, `maxIterations`, `checkCommand`, `commit`, `audit`) are read directly from the file via `StorageService.readConfig()` in each command handler. There are no CLI flags for these options — the config file is the single source of truth.
+The config file is parsed with Effect Schema. Configuration values (`specsPath`, `maxIterations`, `setupCommand`, `checkCommand`, `commit`, `audit`) are read directly from the file via `StorageService.readConfig()` in each command handler. There are no CLI flags for these options — the config file is the single source of truth.
 
 ## Storage
 
@@ -296,8 +341,8 @@ Session files live in `.cuggino/wip/`.
 
 A simple append-only file:
 - Starts with the plan at the top
+- After the plan, a `# Progress Log` heading separates plan content from runtime markers
 - Markers are appended to the end as they are emitted
-- No separate sections - just chronological append
 
 ```markdown
 # Plan
@@ -309,6 +354,8 @@ A simple append-only file:
 
 ## Implementation Details
 ...
+
+# Progress Log
 
 <NOTE>
 Something discovered during implementation...
@@ -437,7 +484,6 @@ Stream.Stream<LlmAgentEvent, LlmSessionError>
 |-------|-------------|
 | `SystemMessage` | System initialization or status message |
 | `AgentMessage` | Text output from the LLM agent |
-| `UserMessage` | User input context (e.g., tool result acknowledgment) |
 | `ToolCall` | Agent requesting to execute a tool |
 | `ToolResult` | Result from tool execution |
 | `PingEvent` | Activity heartbeat - indicates the agent is still working |
@@ -502,7 +548,8 @@ type LoopEvent = LlmAgentEvent | LlmMarkerEvent | LoopPhaseEvent
 | `PlanningStart` | Planning phase starting |
 | `ImplementingStart` | Implementation phase starting |
 | `ReviewingStart` | Review phase starting |
-| `CheckCommandOutput` | Check command output captured |
+| `SetupCommandOutput` | Setup command output captured (only when `setupCommand` configured) |
+| `CheckCommandOutput` | Check command output captured (only when `checkCommand` configured) |
 | `LoopApproved` | Implementation approved (terminal) |
 | `LoopSpecIssue` | Spec issue found (terminal). Includes `content` and `filename` (persisted to `.cuggino/spec-issues/`) |
 | `LoopMaxIterations` | Max iterations reached (terminal) |

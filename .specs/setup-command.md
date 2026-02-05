@@ -29,15 +29,17 @@ Each prompt pre-fills with the current value from the existing config file. If n
 |-------|---------|-------------|---------|-------------|
 | 1 | `specsPath` | `Prompt.text` | `.specs` | Path to the specifications folder |
 | 2 | `maxIterations` | `Prompt.integer` (min: 1) | — | Maximum iterations per loop run (no default pre-fill; `Prompt.integer` doesn't support it) |
-| 3 | `checkCommand` | `Prompt.text` | `pnpm check && pnpm test` | Command to run before implementing and reviewing agents |
-| 4 | `commit` | `Prompt.toggle` | `false` | Auto-commit after each implementing agent invocation |
-| 5 | `audit` | `Prompt.toggle` | `false` | Run background audit agent during idle time |
+| 3 | `setupCommand` | `Prompt.text` | _(empty)_ | Command to run after planning, before implementation (leave empty to skip) |
+| 4 | `checkCommand` | `Prompt.text` | _(empty)_ | Command to run before implementing and reviewing agents (leave empty to skip) |
+| 5 | `commit` | `Prompt.toggle` | `false` | Auto-commit after each implementing agent invocation |
+| 6 | `audit` | `Prompt.toggle` | `false` | Run background audit agent during idle time |
 
 ### Prompt Messages
 
 - `specsPath`: "Path to the specifications folder"
 - `maxIterations`: "Maximum iterations per loop run"
-- `checkCommand`: "Check command (linting, type checking, tests)"
+- `setupCommand`: "Setup command (install deps, build, etc.) — leave empty to skip"
+- `checkCommand`: "Check command (linting, type checking, tests) — leave empty to skip"
 - `commit`: "Auto-commit after each implementation step"
 - `audit`: "Run audit agent during idle time"
 
@@ -49,17 +51,7 @@ Each prompt pre-fills with the current value from the existing config file. If n
 
 ### Schema
 
-The config file is parsed using an Effect Schema with all fields optional and with defaults:
-
-```typescript
-const CugginoConfig = Schema.Struct({
-  specsPath: Schema.String.pipe(Schema.withDecodingDefaultKey(() => ".specs")),
-  maxIterations: Schema.Number.pipe(Schema.withDecodingDefaultKey(() => 10)),
-  checkCommand: Schema.String.pipe(Schema.withDecodingDefaultKey(() => "pnpm check && pnpm test")),
-  commit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false)),
-  audit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false))
-})
-```
+See the `CugginoConfig` schema definition in [storage.md](./storage.md). The schema is the single source of truth for config structure and defaults.
 
 ### Config Usage
 
