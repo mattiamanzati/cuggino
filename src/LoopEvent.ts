@@ -50,6 +50,17 @@ export class ReviewingStart extends Schema.Class<ReviewingStart>("ReviewingStart
 }
 
 /**
+ * Setup command output event
+ */
+export class SetupCommandOutput extends Schema.Class<SetupCommandOutput>("SetupCommandOutput")({
+  _tag: Schema.tag("SetupCommandOutput"),
+  iteration: Schema.Number,
+  output: Schema.String
+}) {
+  [LoopPhaseEventTypeId]: LoopPhaseEventTypeId = LoopPhaseEventTypeId
+}
+
+/**
  * Check command output event
  */
 export class CheckCommandOutput extends Schema.Class<CheckCommandOutput>("CheckCommandOutput")({
@@ -127,6 +138,7 @@ export type LoopPhaseEvent =
   | PlanningStart
   | ImplementingStart
   | ReviewingStart
+  | SetupCommandOutput
   | CheckCommandOutput
   | LoopApproved
   | LoopSpecIssue
@@ -144,6 +156,7 @@ export type LoopInfoEvent =
   | PlanningStart
   | ImplementingStart
   | ReviewingStart
+  | SetupCommandOutput
   | CheckCommandOutput
 
 export const isLoopPhaseEvent = (event: unknown): event is LoopPhaseEvent =>

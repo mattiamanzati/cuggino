@@ -15,6 +15,7 @@ export const watchCommand = Command.make(
       yield* watchService.run({
         specsPath: config.specsPath,
         maxIterations: config.maxIterations,
+        setupCommand: config.setupCommand,
         checkCommand: config.checkCommand,
         commit: config.commit,
         audit: config.audit

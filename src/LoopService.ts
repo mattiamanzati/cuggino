@@ -22,6 +22,7 @@ import {
   PlanningStart,
   ImplementingStart,
   ReviewingStart,
+  SetupCommandOutput,
   CheckCommandOutput,
   LoopApproved,
   LoopSpecIssue,
@@ -52,6 +53,7 @@ export interface LoopRunOptions {
   readonly specsPath: string
   readonly cwd: string
   readonly maxIterations?: number
+  readonly setupCommand?: string
   readonly checkCommand?: string
   readonly commit?: boolean
 }
@@ -294,14 +296,23 @@ export const LoopServiceLayer = Layer.effect(
               // Commit temp plan
               yield* session.commitTempPlan()
 
+              // Setup command (after planning, before implementation)
+              if (opts.setupCommand) {
+                const setupOutput = yield* runCheckCommand(opts.setupCommand, opts.cwd)
+                yield* Queue.offer(queue, new SetupCommandOutput({ iteration, output: setupOutput }))
+              }
+
               // Implementation phase (with Progress inner loop)
               let implementationDone = false
 
               while (!implementationDone) {
                 yield* Queue.offer(queue, new ImplementingStart({ iteration }))
 
-                const checkOutput = yield* runCheckCommand(opts.checkCommand ?? "pnpm check && pnpm test", opts.cwd)
-                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: checkOutput }))
+                let checkOutput: string | undefined
+                if (opts.checkCommand) {
+                  checkOutput = yield* runCheckCommand(opts.checkCommand, opts.cwd)
+                  yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: checkOutput }))
+                }
 
                 const implementingSystemPrompt = implementingPrompt({
                   specsPath: opts.specsPath,
@@ -352,8 +363,11 @@ export const LoopServiceLayer = Layer.effect(
               // Reviewing phase
               yield* Queue.offer(queue, new ReviewingStart({ iteration }))
 
-              const reviewCheckOutput = yield* runCheckCommand(opts.checkCommand ?? "pnpm check && pnpm test", opts.cwd)
-              yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: reviewCheckOutput }))
+              let reviewCheckOutput: string | undefined
+              if (opts.checkCommand) {
+                reviewCheckOutput = yield* runCheckCommand(opts.checkCommand, opts.cwd)
+                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: reviewCheckOutput }))
+              }
 
               const reviewingSystemPrompt = reviewingPrompt({
                 specsPath: opts.specsPath,

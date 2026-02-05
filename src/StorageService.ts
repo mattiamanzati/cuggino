@@ -16,7 +16,8 @@ export class StorageError extends Data.TaggedError("StorageError")<{
 export const CugginoConfig = Schema.Struct({
   specsPath: Schema.String.pipe(Schema.withDecodingDefaultKey(() => ".specs")),
   maxIterations: Schema.Number.pipe(Schema.withDecodingDefaultKey(() => 10)),
-  checkCommand: Schema.String.pipe(Schema.withDecodingDefaultKey(() => "pnpm check && pnpm test")),
+  setupCommand: Schema.optionalKey(Schema.String),
+  checkCommand: Schema.optionalKey(Schema.String),
   commit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false)),
   audit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false))
 })

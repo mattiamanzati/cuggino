@@ -7,23 +7,19 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@effect/platform-node':
-        specifier: https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node@6a720b2
-        version: https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node@6a720b2(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@6a720b2)(ioredis@5.9.2)
-      effect:
-        specifier: https://pkg.pr.new/Effect-TS/effect-smol/effect@6a720b2
-        version: https://pkg.pr.new/Effect-TS/effect-smol/effect@6a720b2
-      uuid:
-        specifier: ^11.0.0
-        version: 11.1.0
     devDependencies:
       '@effect/language-service':
         specifier: ^0.72.1
         version: 0.72.1
+      '@effect/platform-node':
+        specifier: https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node@6a720b2
+        version: https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node@6a720b2(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@6a720b2)(ioredis@5.9.2)
       '@types/node':
         specifier: ^25.0.6
         version: 25.2.0
+      effect:
+        specifier: https://pkg.pr.new/Effect-TS/effect-smol/effect@6a720b2
+        version: https://pkg.pr.new/Effect-TS/effect-smol/effect@6a720b2
       tsdown:
         specifier: ^0.20.1
         version: 0.20.1(typescript@5.9.3)
@@ -33,6 +29,9 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      uuid:
+        specifier: ^11.0.0
+        version: 11.1.0
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@types/node@25.2.0)(tsx@4.21.0)(yaml@2.8.2)

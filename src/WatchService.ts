@@ -30,6 +30,7 @@ export class WatchError extends Data.TaggedError("WatchError")<{
 export interface WatchRunOptions {
   readonly specsPath: string
   readonly maxIterations?: number
+  readonly setupCommand?: string
   readonly checkCommand?: string
   readonly commit?: boolean
   readonly audit?: boolean
@@ -286,6 +287,7 @@ export const WatchServiceLayer = Layer.effect(
                 specsPath: opts.specsPath,
                 cwd: ".",
                 maxIterations: opts.maxIterations,
+                setupCommand: opts.setupCommand,
                 checkCommand: opts.checkCommand,
                 commit: opts.commit
               }).pipe(

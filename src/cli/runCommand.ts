@@ -22,6 +22,7 @@ export const runCommand = Command.make(
         specsPath: config.specsPath,
         cwd: ".",
         maxIterations: config.maxIterations,
+        setupCommand: config.setupCommand,
         checkCommand: config.checkCommand,
         commit: config.commit
       })
