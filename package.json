@@ -3,6 +3,10 @@
   "description": "A dangerous autonomous coding loop focused on specification discussion",
   "version": "0.0.2",
   "author": "mattiamanzati",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattiamanzati/cuggino"
+  },
   "type": "module",
   "packageManager": "pnpm@10.17.1",
   "bin": {
