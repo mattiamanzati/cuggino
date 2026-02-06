@@ -168,7 +168,7 @@ Plan written successfully.
 </PLAN_COMPLETE>
 \`\`\`
 
-**Important**: First write the plan file, then emit PLAN_COMPLETE on a new message, and finally emit in a single new line message "My work here is done, bye!".`
+**Important**: First write the plan file, then emit PLAN_COMPLETE on a new message.`
 }
 
 /**

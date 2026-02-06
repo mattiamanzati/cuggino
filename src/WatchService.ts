@@ -161,7 +161,7 @@ const withAuditDuringIdle = (
           Effect.onInterrupt(() => Queue.offer(queue, new WatchAuditInterrupted({})))
         )
       )
-    }),
+    }).pipe(Effect.delay(1000)),
     // use: run the idle effect (folder watcher)
     (_fiber) => idleEffect,
     // release: always interrupt — no-op if already finished
