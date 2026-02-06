@@ -107,6 +107,9 @@ const reviewingMarkerConfig: MarkerExtractorConfig<{
   REQUEST_CHANGES: (content) => new RequestChanges({ content })
 }
 
+const hasCommand = (cmd: string | undefined): cmd is string =>
+  cmd !== undefined && cmd.trim() !== ""
+
 /**
  * Run a check command and capture its output.
  * This function NEVER fails - it always returns output (success or error message).
@@ -315,7 +318,7 @@ export const LoopServiceLayer = Layer.effect(
               yield* session.commitTempPlan()
 
               // Setup command (after planning, before implementation)
-              if (opts.setupCommand) {
+              if (hasCommand(opts.setupCommand)) {
                 yield* Queue.offer(queue, new SetupCommandStarting({ iteration }))
                 const setupOutput = yield* runCheckCommand(opts.setupCommand, opts.cwd)
                 yield* Queue.offer(queue, new SetupCommandOutput({ iteration, output: setupOutput }))
@@ -328,7 +331,7 @@ export const LoopServiceLayer = Layer.effect(
                 yield* Queue.offer(queue, new ImplementingStart({ iteration }))
 
                 let checkOutput: string | undefined
-                if (opts.checkCommand) {
+                if (hasCommand(opts.checkCommand)) {
                   yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
                   checkOutput = yield* runCheckCommand(opts.checkCommand, opts.cwd)
                   yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: checkOutput }))
@@ -384,7 +387,7 @@ export const LoopServiceLayer = Layer.effect(
               yield* Queue.offer(queue, new ReviewingStart({ iteration }))
 
               let reviewCheckOutput: string | undefined
-              if (opts.checkCommand) {
+              if (hasCommand(opts.checkCommand)) {
                 yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
                 reviewCheckOutput = yield* runCheckCommand(opts.checkCommand, opts.cwd)
                 yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: reviewCheckOutput }))
