@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.4
+
+### Patch Changes
+
+- [`f15f703`](https://github.com/mattiamanzati/cuggino/commit/f15f70340335382cac3aa2f2323872e64819f16e) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - notifications
+
 ## 0.0.3
 
 ### Patch Changes
