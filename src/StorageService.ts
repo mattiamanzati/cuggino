@@ -50,6 +50,9 @@ export interface StorageServiceShape {
   /** Path to .cuggino/tbd */
   readonly tbdDir: string
 
+  /** Path to .cuggino/memory.md */
+  readonly memoryPath: string
+
   /**
    * Write a spec issue to .cuggino/spec-issues/.
    * Generates a UUIDv7 filename, writes the content, and returns the filename.
@@ -85,6 +88,7 @@ export const StorageServiceLayer = (cwd: string) => Layer.effect(
     const specIssuesDir = path.join(rootDir, "spec-issues")
     const backlogDir = path.join(rootDir, "backlog")
     const tbdDir = path.join(rootDir, "tbd")
+    const memoryPath = path.join(rootDir, "memory.md")
 
     // Ensure all directories exist
     yield* fs.makeDirectory(rootDir, { recursive: true })
@@ -100,6 +104,7 @@ export const StorageServiceLayer = (cwd: string) => Layer.effect(
       specIssuesDir,
       backlogDir,
       tbdDir,
+      memoryPath,
 
       writeSpecIssue: (content: string) =>
         Effect.gen(function*() {

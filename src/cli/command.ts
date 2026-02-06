@@ -26,7 +26,8 @@ export const root = Command.make(
         specsPath: config.specsPath,
         specIssuesPath: storage.specIssuesDir,
         backlogPath: storage.backlogDir,
-        tbdPath: storage.tbdDir
+        tbdPath: storage.tbdDir,
+        memoryPath: storage.memoryPath
       })
       const exitCode = yield* agent.interactive({
         cwd: storage.cwd,

@@ -107,7 +107,7 @@ const runAuditAgent = (
   specsPath: string
 ): Effect.Effect<void, WatchError> =>
   Effect.gen(function*() {
-    const auditOpts = { specsPath, tbdPath: storage.tbdDir }
+    const auditOpts = { specsPath, tbdPath: storage.tbdDir, memoryPath: storage.memoryPath }
     const rawStream = agent.spawn({
       cwd: storage.cwd,
       prompt: auditPrompt(auditOpts),

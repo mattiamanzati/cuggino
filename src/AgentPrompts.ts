@@ -8,6 +8,7 @@ export interface PmCommandPromptOptions {
   readonly specIssuesPath: string
   readonly backlogPath: string
   readonly tbdPath: string
+  readonly memoryPath: string
 }
 
 export interface PlanningPromptOptions {
@@ -35,6 +36,7 @@ export interface ReviewingPromptOptions {
 export interface AuditPromptOptions {
   readonly specsPath: string
   readonly tbdPath: string
+  readonly memoryPath: string
 }
 
 /**
@@ -54,7 +56,7 @@ After a set of changes has been applied to the specs, ALWAYS ask the user if the
 want to create a backlog item for the changes.
 
 RULES:
-- You may ONLY write or edit files inside the "${opts.specsPath}", "${opts.specIssuesPath}", "${opts.backlogPath}", and "${opts.tbdPath}" folders.
+- You may ONLY write or edit files inside the "${opts.specsPath}", "${opts.specIssuesPath}", "${opts.backlogPath}", and "${opts.tbdPath}" folders, and the memory file at "${opts.memoryPath}".
 - Do NOT create, edit, or modify any file outside of those folders.
 - Do NOT write source code, configuration files, or scripts.
 - Do NOT implement features yourself. You are a project manager, not a coder.
@@ -88,7 +90,8 @@ TBD ITEMS:
 - Whenever the current discussion reaches a natural stopping point and there are no spec issues, check "${opts.tbdPath}" for pending items.
 - If pending items exist, prompt the user to discuss one of them next.
 - To resolve a TBD item: update the relevant spec files in "${opts.specsPath}" based on the user's decision (or create backlog items if implementation is needed), then delete the TBD file from "${opts.tbdPath}".
-- NEVER dismiss a TBD item about an implementation issue without asking the user. Even if the finding is about code (not specs), the user may want a backlog item created for it. Always present the finding and let the user decide: fix the spec, create a backlog item, or skip.`
+- NEVER dismiss a TBD item about an implementation issue without asking the user. Even if the finding is about code (not specs), the user may want a backlog item created for it. Always present the finding and let the user decide: fix the spec, create a backlog item, or skip.
+- When the user chooses to DISMISS a TBD item (no spec change, no backlog item), record a brief summary of the dismissed finding in "${opts.memoryPath}" before deleting the TBD file. This prevents the audit agent from re-emitting the same finding in future runs.`
 
 /**
  * System prompt for the planning agent.
@@ -268,7 +271,8 @@ PROCESS:
    - Unclear specs — ambiguous or contradictory specification language
    - Improvement opportunities — structural or organizational improvements to specs
 4. Check existing "${opts.tbdPath}" files to AVOID duplicating findings that have already been raised
-5. Emit <TO_BE_DISCUSSED> immediately as each finding is discovered — do not batch findings or wait until the end
+5. Read "${opts.memoryPath}" (if it exists) and SKIP any findings that match previously dismissed items recorded there
+6. Emit <TO_BE_DISCUSSED> immediately as each finding is discovered — do not batch findings or wait until the end
 
 MARKERS:
 Each finding must be wrapped in a <TO_BE_DISCUSSED> tag:
@@ -283,7 +287,7 @@ Each <TO_BE_DISCUSSED> should be self-contained and actionable. You may emit zer
 /**
  * Prompt for the audit agent.
  */
-export const auditPrompt = (opts: AuditPromptOptions): string => `Audit the codebase against the specs in "${opts.specsPath}". Look for discrepancies, unclear specifications, missing implementations, and improvement opportunities. Emit <TO_BE_DISCUSSED> immediately as each finding is discovered — do not wait or batch them. Check "${opts.tbdPath}" first to avoid duplicate findings.`
+export const auditPrompt = (opts: AuditPromptOptions): string => `Audit the codebase against the specs in "${opts.specsPath}". Look for discrepancies, unclear specifications, missing implementations, and improvement opportunities. Emit <TO_BE_DISCUSSED> immediately as each finding is discovered — do not wait or batch them. Check "${opts.tbdPath}" first to avoid duplicate findings. Also check "${opts.memoryPath}" (if it exists) for previously dismissed findings and skip those.`
 
 /**
  * System prompt for the reviewing agent.
