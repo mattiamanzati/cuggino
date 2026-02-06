@@ -120,7 +120,7 @@ const runAuditAgent = (
     yield* markerStream.pipe(
       Stream.runForEach((event) =>
         Effect.gen(function*() {
-          Queue.offerUnsafe(queue, event as WatchEvent)
+          yield* Queue.offer(queue, event as WatchEvent)
 
           if (event instanceof ToBeDiscussed) {
             const filename = yield* storage.writeTbdItem(event.content)
@@ -264,12 +264,12 @@ export const WatchServiceLayer = Layer.effect(
                 commit: opts.commit
               }).pipe(
                 Stream.runForEach((event) =>
-                  Effect.sync(() => {
-                    Queue.offerUnsafe(queue, event)
+                  Effect.gen(function*() {
+                    yield* Queue.offer(queue, event)
                     if(isLoopTerminalEvent(event)) {
                       terminalEvents.push(event)
                     }
-                   })
+                  })
                 )
               )
 
