@@ -29,7 +29,7 @@ export const root = Command.make(
         tbdPath: storage.tbdDir
       })
       const exitCode = yield* agent.interactive({
-        cwd: process.cwd(),
+        cwd: storage.cwd,
         systemPrompt,
         dangerouslySkipPermissions: true
       })

@@ -32,6 +32,9 @@ export const encodeCugginoConfig = Schema.encodeSync(Schema.fromJsonString(Cuggi
  * Storage service shape
  */
 export interface StorageServiceShape {
+  /** The working directory used to resolve all paths */
+  readonly cwd: string
+
   /** Path to the .cuggino root directory */
   readonly rootDir: string
 
@@ -91,6 +94,7 @@ export const StorageServiceLayer = (cwd: string) => Layer.effect(
     yield* fs.makeDirectory(tbdDir, { recursive: true })
 
     return {
+      cwd,
       rootDir,
       wipDir,
       specIssuesDir,
