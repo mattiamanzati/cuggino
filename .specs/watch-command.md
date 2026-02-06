@@ -155,11 +155,11 @@ Notifications use a group ID derived from the working directory via `-group` (e.
 
 #### Persistence
 
-The notification is requested as an alert (stays until manually dismissed). Whether this is honored depends on the user's OS notification settings — the OS has final say on alert vs. banner behavior.
+The notification is sent without specifying banner vs. alert style — the OS determines display behavior based on the user's notification preferences.
 
 ### Relationship to Terminal Bell
 
-The terminal bell on backlog-empty events is independent and always active. When `notify` is set, both the bell and the notification fire.
+The terminal bell fires on both backlog-empty and spec-issue-waiting events — any idle state that needs user attention triggers a bell. The bell is independent of the `notify` setting and always active. When `notify` is set, both the bell and the notification fire.
 
 ## Lifecycle
 

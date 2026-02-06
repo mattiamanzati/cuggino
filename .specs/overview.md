@@ -84,7 +84,8 @@ After each planning phase completes, the system can optionally run a setup comma
 
 - **Optional**: Only runs if `setupCommand` is configured in `.cuggino.json` and is non-empty
 - **Announced**: A "starting" event is emitted before the command runs, so the user knows what's happening
-- **Failure is non-blocking**: The loop continues to implementation regardless of setup outcome
+- **Failure exits the loop**: If the setup command exits with a non-zero code, the loop emits an error and exits. Setup failures typically indicate a broken environment (e.g., failed dependency install) where continuing would be pointless.
+- **Output is not passed to agents**: Unlike the check command, setup output is for environment preparation and is not forwarded to implementing or reviewing agents.
 - **Runs once per planning phase**: Not repeated for each implementing agent iteration
 
 ## Check Command
@@ -109,7 +110,7 @@ Before each implementing agent iteration and before the reviewing agent, the sys
 
 When the `commit` option is enabled in `.cuggino.json`, the loop automatically commits all changed files after each implementing agent invocation. This creates a checkpoint of progress after each task.
 
-- After each implementing agent finishes, all changes are staged and committed (excluding the specs folder)
+- After each implementing agent finishes, all changes are staged and committed (excluding the specs folder and the `.cuggino/` folder)
 - The marker content (progress note or done summary) is used as the commit message
 - The initial HEAD commit hash is captured before the loop starts, so the reviewer can focus on changes introduced since that baseline
 - If there are no changes to commit, the commit is skipped
@@ -178,7 +179,7 @@ Project settings are stored in `.cuggino.json`, created and updated interactivel
 
 Each loop run is tracked in a **session** — a file that is initialized with the plan content and then appended to as agents work, accumulating progress notes and markers. Sessions are identified by UUIDv7 and stored in `.cuggino/wip/`. Session files are automatically cleaned up when the session ends (whether approved, spec issue, or max iterations reached).
 
-When the reviewer emits REQUEST_CHANGES, a review file is created alongside the session containing the detailed code review — this is fed back to the planning agent on the next iteration.
+When the reviewer emits REQUEST_CHANGES, a review file is created alongside the session containing the detailed code review — this is fed back to the planning agent on the next iteration. The review file is cleared at the start of each reviewing phase to prevent stale review content from a previous iteration being used if the reviewer fails to write a new one.
 
 ## Technology Stack
 

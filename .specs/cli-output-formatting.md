@@ -14,12 +14,13 @@ When **verbose is off** (default), the following are hidden:
 - System messages
 - Agent messages (reasoning and explanations)
 - Tool results (file contents, command output)
+- Markers (agent-emitted markers like NOTE, PROGRESS, DONE, etc.)
 - Setup command output → replaced with `[Setup] Completed (exit {code})` or `[Setup] Failed (exit {code})`
 - Check command output → replaced with `[Check] Completed (exit {code})` or `[Check] Failed (exit {code})`
 
 When **verbose is on**, everything is shown (the current behavior).
 
-The following are always shown regardless of verbose mode: tool calls, markers, loop phase events, watch events, commit events, and the activity spinner.
+The following are always shown regardless of verbose mode: tool calls, loop phase events, watch events, commit events, and the activity spinner. Loop phase events already summarize the important state transitions (approved, spec issue, max iterations), so markers are not needed in non-verbose mode.
 
 ## Event Display
 
@@ -31,10 +32,11 @@ When agents are working, the user sees their activity streamed in real-time (som
 - **Agent messages** — shown dimmed (the agent's reasoning and explanations) *(verbose only)*
 - **Tool calls** — shown in dim cyan, prefixed with `▶`, with the tool name and most relevant parameter (e.g., `▶ Read: /path/to/file.ts`, `▶ Bash: pnpm build`, `▶ Grep: pattern`)
 - **Tool results** — shown dimmed with line numbers, truncated to avoid flooding the terminal *(verbose only)*
+- **User messages** — shown dimmed, prefixed with `[User]` *(verbose only)*
 
-### Markers
+### Markers *(verbose only)*
 
-When agents emit markers, they are displayed prominently with color coding:
+When agents emit markers, they are displayed prominently with color coding. Markers are only shown in verbose mode — in non-verbose mode, the loop phase events provide the necessary state transition information:
 
 | Marker | Color | Format |
 |--------|-------|--------|
@@ -77,7 +79,7 @@ When running `cuggino watch`, additional events are displayed:
 
 | Event | Color | Format |
 |-------|-------|--------|
-| Spec issue waiting | Dim | `[Watch] Spec issue detected, waiting for resolution...` |
+| Spec issue waiting | Dim | `[Watch] Spec issue detected, waiting for resolution...` (with terminal bell) |
 | Backlog empty | Dim | `[Watch] Backlog empty, waiting for new items...` (with terminal bell) |
 | Processing item | Dim | `[Watch] Processing: {filename}` |
 | Item completed | Dim | `[Watch] Completed: {filename}` |
@@ -87,7 +89,7 @@ When running `cuggino watch`, additional events are displayed:
 | Audit interrupted | Cyan | `[Watch] Audit agent interrupted, work arrived.` |
 | TBD item found | Bold Magenta | `[Watch] TBD item found: {filename}` |
 
-The backlog-empty event triggers a terminal bell (`\x07`) to notify the user that the watch loop is idle.
+Both the backlog-empty and spec-issue-waiting events trigger a terminal bell (`\x07`) to notify the user that the watch loop needs attention.
 
 ## Activity Spinner
 
@@ -98,9 +100,16 @@ When the agent is working but no visible events are being produced, an animated 
 ```
 
 - Uses braille dot pattern characters for smooth animation
-- Shows elapsed time since the last visible event
+- Shows elapsed time since the last visible or suppressed non-ping event
 - Elapsed time is omitted if less than 1 second
 - The spinner is overwritten in-place (no scrolling) and cleared when real output arrives
+
+### Suppressed Event Handling
+
+When formatting an event, the output layer first computes the formatted output. If the result is non-null, it is displayed as normal. If the result is null (event suppressed due to verbose mode being off), the spinner output is returned instead. The difference is in the timer:
+
+- **Ping events** — return the spinner output but do **not** reset the timer. Pings are heartbeats and do not represent real agent activity.
+- **All other suppressed events** (markers, agent messages, tool results, user messages) — reset the timer and return the spinner output. This keeps the spinner's elapsed time accurate: the agent is active, the output is just hidden.
 
 ## Output Examples
 
