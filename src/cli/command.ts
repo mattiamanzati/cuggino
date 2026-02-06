@@ -14,7 +14,12 @@ export class CliError extends Data.TaggedError("CliError")<{
 export const root = Command.make(
   "cuggino",
   {
-    version: Flag.boolean("version").pipe(Flag.withAlias("v"))
+    version: Flag.boolean("version").pipe(Flag.withAlias("v")),
+    agent: Flag.choice("agent", ["claude", "codex"]).pipe(
+      Flag.withAlias("a"),
+      Flag.withDefault("claude"),
+      Flag.withDescription("LLM provider to use")
+    )
   },
   ({ version }) =>
     Effect.gen(function*() {
