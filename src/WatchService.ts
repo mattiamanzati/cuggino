@@ -13,6 +13,7 @@ import {
   WatchBacklogWaiting,
   WatchProcessingItem,
   WatchItemCompleted,
+  WatchItemRetained,
   WatchSpecIssueWaiting,
   WatchAuditStarted,
   WatchAuditEnded,
@@ -291,6 +292,8 @@ export const WatchServiceLayer = Layer.effect(
                       if (currentHash === originalHash) {
                         yield* fs.remove(filePath)
                         yield* Queue.offer(queue, new WatchItemCompleted({ filename: firstFile }))
+                      } else {
+                        yield* Queue.offer(queue, new WatchItemRetained({ filename: firstFile }))
                       }
                     }
                     break

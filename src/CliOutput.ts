@@ -243,6 +243,8 @@ export const formatWatchLoopEvent = (event: WatchLoopEvent): string => {
       return `${DIM}[Watch] Processing: ${event.filename}${RESET}`
     case "WatchItemCompleted":
       return `${DIM}[Watch] Completed: ${event.filename}${RESET}`
+    case "WatchItemRetained":
+      return `${DIM}[Watch] Retained: ${event.filename} (content changed during loop)${RESET}`
     case "WatchSpecIssueWaiting":
       return `${DIM}[Watch] Spec issue detected, waiting for resolution...${RESET}`
     case "WatchAuditStarted":

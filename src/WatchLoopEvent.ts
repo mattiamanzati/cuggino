@@ -23,6 +23,13 @@ export class WatchItemCompleted extends Schema.Class<WatchItemCompleted>("WatchI
   [WatchLoopEventTypeId]: WatchLoopEventTypeId = WatchLoopEventTypeId
 }
 
+export class WatchItemRetained extends Schema.Class<WatchItemRetained>("WatchItemRetained")({
+  _tag: Schema.tag("WatchItemRetained"),
+  filename: Schema.String
+}) {
+  [WatchLoopEventTypeId]: WatchLoopEventTypeId = WatchLoopEventTypeId
+}
+
 export class WatchSpecIssueWaiting extends Schema.Class<WatchSpecIssueWaiting>("WatchSpecIssueWaiting")({
   _tag: Schema.tag("WatchSpecIssueWaiting")
 }) {
@@ -59,6 +66,7 @@ export type WatchLoopEvent =
   | WatchBacklogWaiting
   | WatchProcessingItem
   | WatchItemCompleted
+  | WatchItemRetained
   | WatchSpecIssueWaiting
   | WatchAuditStarted
   | WatchAuditEnded
