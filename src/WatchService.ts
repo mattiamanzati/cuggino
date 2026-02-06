@@ -34,7 +34,7 @@ export interface WatchRunOptions {
   readonly checkCommand?: string
   readonly commit?: boolean
   readonly audit?: boolean
-  readonly notify?: string
+  readonly notify?: "none" | "osx-notification"
 }
 
 export type WatchEvent = LoopEvent | WatchLoopEvent
