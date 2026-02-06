@@ -18,17 +18,17 @@ const escapeAppleScript = (s: string): string =>
 /**
  * Detect the repository name from Git, falling back to folder basename.
  */
-const detectRepoName = (cwd: string): Effect.Effect<string, never, ChildProcessSpawner.ChildProcessSpawner> =>
+const detectRepoName: Effect.Effect<string, never, ChildProcessSpawner.ChildProcessSpawner> =
   Effect.scoped(
     Effect.gen(function*() {
-      const cmd = ChildProcess.make({ cwd, shell: true })`git rev-parse --show-toplevel`
+      const cmd = ChildProcess.make({ cwd: ".", shell: true })`git rev-parse --show-toplevel`
       const output = (yield* ChildProcess.string(cmd)).trim()
       const parts = output.split("/")
-      return parts[parts.length - 1] || cwd.split("/").pop() || "cuggino"
+      return parts[parts.length - 1] || ".".split("/").pop() || "cuggino"
     })
   ).pipe(
     Effect.catch(() => {
-      const parts = cwd.split("/")
+      const parts = ".".split("/")
       return Effect.succeed(parts[parts.length - 1] || "cuggino")
     })
   )
@@ -36,10 +36,10 @@ const detectRepoName = (cwd: string): Effect.Effect<string, never, ChildProcessS
 /**
  * Create the NotificationService layer.
  */
-export const NotificationServiceLayer = (cwd: string) => Layer.effect(
+export const NotificationServiceLayer = Layer.effect(
   NotificationService,
   Effect.gen(function*() {
-    const repoName = yield* detectRepoName(cwd)
+    const repoName = yield* detectRepoName
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const provide = Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner)
 
@@ -70,7 +70,7 @@ export const NotificationServiceLayer = (cwd: string) => Layer.effect(
               "-title", title,
               "-message", body,
               "-sound", "default",
-              "-group", `cuggino:${cwd}`,
+              "-group", "cuggino:.",
               "-execute", `osascript -e '${focusScript}'`
             ])
             yield* ChildProcess.string(cmd).pipe(provide, Effect.ignore)

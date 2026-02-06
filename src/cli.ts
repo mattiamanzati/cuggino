@@ -15,12 +15,12 @@ import { root } from "./cli/command.js"
 const baseServicesLayer = LoopServiceLayer.pipe(
   Layer.provideMerge(ClaudeLlmAgentLayer),
   Layer.provideMerge(SessionServiceMap.layer),
-  Layer.provideMerge(StorageServiceLayer(process.cwd())),
+  Layer.provideMerge(StorageServiceLayer),
   Layer.provideMerge(NodeServices.layer)
 )
 
 const servicesLayer = WatchServiceLayer.pipe(
-  Layer.provideMerge(NotificationServiceLayer(process.cwd())),
+  Layer.provideMerge(NotificationServiceLayer),
   Layer.provideMerge(baseServicesLayer)
 )
 
