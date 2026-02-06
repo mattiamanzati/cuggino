@@ -231,18 +231,18 @@ Description of the issue...
 </SPEC_ISSUE>
 \`\`\`
 
-**DONE** - All tasks complete (exit):
-\`\`\`
-<DONE>
-Quick summary of all the tasks implemented (git commit message style)
-</DONE>
-
 **PROGRESS** - Picked task is complete, leave notes for future tasks and exit immediately after:
 \`\`\`
 <PROGRESS>
 Completed X, beware that Y... (git commit message style)
 </PROGRESS>
 \`\`\`
+
+**DONE** - All tasks complete (exit):
+\`\`\`
+<DONE>
+Quick summary of all the tasks implemented (git commit message style)
+</DONE>
 \`\`\``
 }
 
