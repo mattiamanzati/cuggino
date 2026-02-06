@@ -5,6 +5,7 @@ import { StorageService } from "../StorageService.js"
 import { withCliOutput } from "../CliOutput.js"
 import { isLoopTerminalEvent, type LoopTerminalEvent } from "../LoopEvent.js"
 import { CliError } from "./command.js"
+import { AgentLayerMap } from "../AgentLayerMap.js"
 
 export const runCommand = Command.make(
   "run",
@@ -15,6 +16,11 @@ export const runCommand = Command.make(
     ),
     verbose: Flag.boolean("verbose").pipe(
       Flag.withDescription("Enable verbose output")
+    ),
+    agent: Flag.choice("agent", ["claude", "codex"]).pipe(
+      Flag.withAlias("a"),
+      Flag.withDefault("claude"),
+      Flag.withDescription("LLM provider to use")
     )
   },
   (args) =>
@@ -56,4 +62,6 @@ export const runCommand = Command.make(
         }
       }
     })
+).pipe(
+  Command.provide((input) => AgentLayerMap.get(input.agent))
 )

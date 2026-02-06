@@ -1,10 +1,16 @@
 import { Effect } from "effect"
-import { Command, Prompt } from "effect/unstable/cli"
+import { Command, Flag, Prompt } from "effect/unstable/cli"
 import { StorageService } from "../StorageService.js"
 
 export const setupCommand = Command.make(
   "setup",
-  {},
+  {
+    agent: Flag.choice("agent", ["claude", "codex"]).pipe(
+      Flag.withAlias("a"),
+      Flag.withDefault("claude"),
+      Flag.withDescription("LLM provider to use")
+    )
+  },
   () =>
     Effect.gen(function*() {
       const storage = yield* StorageService

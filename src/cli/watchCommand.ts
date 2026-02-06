@@ -3,12 +3,18 @@ import { Command, Flag } from "effect/unstable/cli"
 import { WatchService } from "../WatchService.js"
 import { StorageService } from "../StorageService.js"
 import { withCliOutput } from "../CliOutput.js"
+import { AgentLayerMap } from "../AgentLayerMap.js"
 
 export const watchCommand = Command.make(
   "watch",
   {
     verbose: Flag.boolean("verbose").pipe(
       Flag.withDescription("Enable verbose output")
+    ),
+    agent: Flag.choice("agent", ["claude", "codex"]).pipe(
+      Flag.withAlias("a"),
+      Flag.withDefault("claude"),
+      Flag.withDescription("LLM provider to use")
     )
   },
   (args) =>
@@ -29,4 +35,6 @@ export const watchCommand = Command.make(
         Stream.runDrain
       )
     })
+).pipe(
+  Command.provide((input) => AgentLayerMap.get(input.agent))
 )

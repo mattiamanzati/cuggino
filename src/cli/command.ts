@@ -6,6 +6,7 @@ import { setupCommand } from "./setupCommand.js"
 import { StorageService } from "../StorageService.js"
 import { LlmAgent } from "../LlmAgent.js"
 import { pmCommandPrompt } from "../AgentPrompts.js"
+import { AgentLayerMap } from "../AgentLayerMap.js"
 
 export class CliError extends Data.TaggedError("CliError")<{
   readonly message: string
@@ -47,5 +48,6 @@ export const root = Command.make(
     })
 ).pipe(
   Command.withDescription("Autonomous coder loop"),
-  Command.withSubcommands([runCommand, watchCommand, setupCommand])
+  Command.withSubcommands([runCommand, watchCommand, setupCommand]),
+  Command.provide((input) => AgentLayerMap.get(input.agent))
 )
