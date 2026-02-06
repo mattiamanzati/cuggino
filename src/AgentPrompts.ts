@@ -287,7 +287,7 @@ Each <TO_BE_DISCUSSED> should be self-contained and actionable. You may emit zer
 /**
  * Prompt for the audit agent.
  */
-export const auditPrompt = (opts: AuditPromptOptions): string => `Audit the codebase against the specs in "${opts.specsPath}". Look for discrepancies, unclear specifications, missing implementations, and improvement opportunities. Emit <TO_BE_DISCUSSED> immediately as each finding is discovered — do not wait or batch them. Check "${opts.tbdPath}" first to avoid duplicate findings. Also check "${opts.memoryPath}" (if it exists) for previously dismissed findings and skip those.`
+export const auditPrompt = (opts: AuditPromptOptions): string => `Audit the codebase against the specs in "${opts.specsPath}". Look for discrepancies, unclear specifications, missing implementations, and improvement opportunities. Emit <TO_BE_DISCUSSED> immediately as each finding is discovered — do not wait or batch them. Check "${opts.tbdPath}" first to avoid duplicate findings.`
 
 /**
  * System prompt for the reviewing agent.
