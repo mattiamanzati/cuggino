@@ -1,9 +1,10 @@
-import { Effect, Stream } from "effect"
+import { Effect, Layer, Stream } from "effect"
 import { Command, Flag } from "effect/unstable/cli"
-import { WatchService } from "../WatchService.js"
+import { WatchService, WatchServiceLayer } from "../WatchService.js"
 import { StorageService } from "../StorageService.js"
 import { withCliOutput } from "../CliOutput.js"
 import { AgentLayerMap } from "../AgentLayerMap.js"
+import { LoopServiceLayer } from "../LoopService.js"
 
 export const watchCommand = Command.make(
   "watch",
@@ -36,5 +37,10 @@ export const watchCommand = Command.make(
       )
     })
 ).pipe(
-  Command.provide((input) => AgentLayerMap.get(input.agent))
+  Command.provide((input) =>
+    WatchServiceLayer.pipe(
+      Layer.provideMerge(LoopServiceLayer),
+      Layer.provideMerge(AgentLayerMap.get(input.agent))
+    )
+  )
 )

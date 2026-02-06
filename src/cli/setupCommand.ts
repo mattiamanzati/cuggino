@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { Command, Flag, Prompt } from "effect/unstable/cli"
 import { StorageService } from "../StorageService.js"
+import { AgentLayerMap } from "../AgentLayerMap.js"
 
 export const setupCommand = Command.make(
   "setup",
@@ -67,4 +68,6 @@ export const setupCommand = Command.make(
         console.log()
       })
     })
+).pipe(
+  Command.provide((input) => AgentLayerMap.get(input.agent))
 )
