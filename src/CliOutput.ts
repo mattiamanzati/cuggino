@@ -132,18 +132,18 @@ const formatElapsed = (seconds: number): string => {
 /**
  * Format an LLM agent event for console output with colors
  */
-export const formatLlmAgentEvent = (event: LlmAgentEvent): string | null => {
+export const formatLlmAgentEvent = (event: LlmAgentEvent, verbose: boolean): string | null => {
   switch (event._tag) {
     case "SystemMessage":
-      return `${DIM}[System] ${event.text}${RESET}`
+      return verbose ? `${DIM}[System] ${event.text}${RESET}` : null
     case "AgentMessage":
-      return `${DIM}${event.text}${RESET}`
+      return verbose ? `${DIM}${event.text}${RESET}` : null
     case "UserMessage":
-      return `${DIM}[User] ${event.text}${RESET}`
+      return verbose ? `${DIM}[User] ${event.text}${RESET}` : null
     case "ToolCall":
       return `${DIM_CYAN}▶ ${event.name}${formatToolParameters(event.name, event.input)}${RESET}`
     case "ToolResult":
-      return `${DIM}${formatToolResult(event.output)}${RESET}`
+      return verbose ? `${DIM}${formatToolResult(event.output)}${RESET}` : null
     case "PingEvent":
       return null
   }
@@ -193,7 +193,7 @@ export const CLEAR_LINE = "\x1b[2K\r"
 /**
  * Format a LoopPhaseEvent for console output
  */
-export const formatLoopPhaseEvent = (event: LoopPhaseEvent): string => {
+export const formatLoopPhaseEvent = (event: LoopPhaseEvent, verbose: boolean): string => {
   switch (event._tag) {
     case "IterationStart":
       return `\n${BOLD}[Loop] === Iteration ${event.iteration}/${event.maxIterations} ===${RESET}`
@@ -208,12 +208,20 @@ export const formatLoopPhaseEvent = (event: LoopPhaseEvent): string => {
     case "CheckCommandStarting":
       return `${DIM}[Check] Running...${RESET}`
     case "SetupCommandOutput": {
+      if (!verbose) {
+        const label = event.exitCode === 0 ? "Completed" : "Failed"
+        return `${DIM}[Setup] ${label} (exit ${event.exitCode})${RESET}`
+      }
       const truncatedSetup = event.output.length > 500
         ? event.output.slice(0, 500) + "..."
         : event.output
       return `${DIM}[Setup] Output:\n${truncatedSetup}${RESET}`
     }
     case "CheckCommandOutput": {
+      if (!verbose) {
+        const label = event.exitCode === 0 ? "Completed" : "Failed"
+        return `${DIM}[Check] ${label} (exit ${event.exitCode})${RESET}`
+      }
       const truncated = event.output.length > 500
         ? event.output.slice(0, 500) + "..."
         : event.output
@@ -264,7 +272,8 @@ export const formatWatchLoopEvent = (event: WatchLoopEvent): string => {
  */
 const computeEventOutput = (
   event: PrintableEvent,
-  spinnerState: Ref.Ref<SpinnerState>
+  spinnerState: Ref.Ref<SpinnerState>,
+  verbose: boolean
 ): Effect.Effect<string | null> =>
   Effect.gen(function*() {
     const state = yield* Ref.get(spinnerState)
@@ -290,10 +299,10 @@ const computeEventOutput = (
       const formatted = isWatchLoopEvent(event)
         ? formatWatchLoopEvent(event)
         : isLoopPhaseEvent(event)
-          ? formatLoopPhaseEvent(event)
+          ? formatLoopPhaseEvent(event, verbose)
           : isLlmMarkerEvent(event)
             ? formatLlmMarkerEvent(event as LlmMarkerEvent)
-            : formatLlmAgentEvent(event as LlmAgentEvent)
+            : formatLlmAgentEvent(event as LlmAgentEvent, verbose)
 
       yield* Ref.set(spinnerState, {
         ...state,
@@ -316,14 +325,15 @@ const computeEventOutput = (
  * Each emitted string is a complete output fragment (may or may not include trailing newline).
  */
 export const formatCliOutput = <E, R>(
-  stream: Stream.Stream<PrintableEvent, E, R>
+  stream: Stream.Stream<PrintableEvent, E, R>,
+  verbose: boolean
 ): Stream.Stream<string, E, R> =>
   Stream.unwrap(
     Effect.gen(function*() {
       const spinnerState = yield* Ref.make<SpinnerState>(makeSpinnerState())
 
       return stream.pipe(
-        Stream.mapEffect((event) => computeEventOutput(event, spinnerState)),
+        Stream.mapEffect((event) => computeEventOutput(event, spinnerState, verbose)),
         Stream.filter((s): s is string => s !== null && s !== "")
       )
     })
@@ -334,7 +344,8 @@ export const formatCliOutput = <E, R>(
  * Events pass through unchanged.
  */
 export const withCliOutput = <X extends PrintableEvent, E, R>(
-  stream: Stream.Stream<X, E, R>
+  stream: Stream.Stream<X, E, R>,
+  verbose: boolean
 ): Stream.Stream<X, E, R> =>
   Stream.unwrap(
     Effect.gen(function*() {
@@ -343,7 +354,7 @@ export const withCliOutput = <X extends PrintableEvent, E, R>(
       return stream.pipe(
         Stream.mapEffect((event) =>
           Effect.gen(function*() {
-            const output = yield* computeEventOutput(event, spinnerState)
+            const output = yield* computeEventOutput(event, spinnerState, verbose)
             if (output !== null && output !== "") {
               yield* Effect.sync(() => process.stdout.write(output))
             }

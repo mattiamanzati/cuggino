@@ -1,13 +1,18 @@
 import { Effect, Stream } from "effect"
-import { Command } from "effect/unstable/cli"
+import { Command, Flag } from "effect/unstable/cli"
 import { WatchService } from "../WatchService.js"
 import { StorageService } from "../StorageService.js"
 import { withCliOutput } from "../CliOutput.js"
 
 export const watchCommand = Command.make(
   "watch",
-  {},
-  () =>
+  {
+    verbose: Flag.boolean("verbose").pipe(
+      Flag.withAlias("v"),
+      Flag.withDescription("Enable verbose output")
+    )
+  },
+  (args) =>
     Effect.gen(function*() {
       const storage = yield* StorageService
       const config = yield* storage.readConfig()
@@ -21,7 +26,7 @@ export const watchCommand = Command.make(
         audit: config.audit,
         notify: config.notify
       }).pipe(
-        withCliOutput,
+        (s) => withCliOutput(s, args.verbose),
         Stream.runDrain
       )
     })

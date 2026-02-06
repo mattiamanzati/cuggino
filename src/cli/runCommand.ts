@@ -12,6 +12,10 @@ export const runCommand = Command.make(
     focus: Flag.string("focus").pipe(
       Flag.withAlias("f"),
       Flag.withDescription("The focus area to work on (e.g., 'Implement user authentication')")
+    ),
+    verbose: Flag.boolean("verbose").pipe(
+      Flag.withAlias("v"),
+      Flag.withDescription("Enable verbose output")
     )
   },
   (args) =>
@@ -32,7 +36,7 @@ export const runCommand = Command.make(
       const terminalEvents: Array<LoopTerminalEvent> = []
 
       yield* stream.pipe(
-        withCliOutput,
+        (s) => withCliOutput(s, args.verbose),
         Stream.runForEach((event) =>
           Effect.sync(() => {
             if (isLoopTerminalEvent(event)) {

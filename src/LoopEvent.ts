@@ -75,7 +75,8 @@ export class CheckCommandStarting extends Schema.Class<CheckCommandStarting>("Ch
 export class SetupCommandOutput extends Schema.Class<SetupCommandOutput>("SetupCommandOutput")({
   _tag: Schema.tag("SetupCommandOutput"),
   iteration: Schema.Number,
-  output: Schema.String
+  output: Schema.String,
+  exitCode: Schema.Number
 }) {
   [LoopPhaseEventTypeId]: LoopPhaseEventTypeId = LoopPhaseEventTypeId
 }
@@ -86,7 +87,8 @@ export class SetupCommandOutput extends Schema.Class<SetupCommandOutput>("SetupC
 export class CheckCommandOutput extends Schema.Class<CheckCommandOutput>("CheckCommandOutput")({
   _tag: Schema.tag("CheckCommandOutput"),
   iteration: Schema.Number,
-  output: Schema.String
+  output: Schema.String,
+  exitCode: Schema.Number
 }) {
   [LoopPhaseEventTypeId]: LoopPhaseEventTypeId = LoopPhaseEventTypeId
 }

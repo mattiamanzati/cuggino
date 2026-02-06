@@ -112,21 +112,21 @@ const hasCommand = (cmd: string | undefined): cmd is string =>
 
 /**
  * Run a check command and capture its output.
- * This function NEVER fails - it always returns output (success or error message).
+ * This function NEVER fails - it always returns output and exit code.
  */
-const runCheckCommand = (command: string, cwd: string): Effect.Effect<string, never, ChildProcessSpawner.ChildProcessSpawner> =>
+const runCheckCommand = (command: string, cwd: string): Effect.Effect<{ output: string; exitCode: number }, never, ChildProcessSpawner.ChildProcessSpawner> =>
   Effect.gen(function*() {
     const cmd = ChildProcess.make({ cwd, shell: true })`${command}`
     const handle = yield* ChildProcess.spawn(cmd)
     const output = yield* Stream.mkString(Stream.decodeText(handle.all))
     const exitCode = yield* handle.exitCode
-    if (output.trim()) return output
-    if (exitCode !== 0) return `Check command failed with exit code ${exitCode}.`
-    return "Check command completed successfully with no output."
+    if (output.trim()) return { output, exitCode }
+    if (exitCode !== 0) return { output: `Check command failed with exit code ${exitCode}.`, exitCode }
+    return { output: "Check command completed successfully with no output.", exitCode }
   }).pipe(
     Effect.scoped,
     Effect.catch((cause) =>
-      Effect.succeed(`Check command failed: ${cause}`)
+      Effect.succeed({ output: `Check command failed: ${cause}`, exitCode: -1 })
     )
   )
 
@@ -320,8 +320,8 @@ export const LoopServiceLayer = Layer.effect(
               // Setup command (after planning, before implementation)
               if (hasCommand(opts.setupCommand)) {
                 yield* Queue.offer(queue, new SetupCommandStarting({ iteration }))
-                const setupOutput = yield* runCheckCommand(opts.setupCommand, opts.cwd)
-                yield* Queue.offer(queue, new SetupCommandOutput({ iteration, output: setupOutput }))
+                const setupResult = yield* runCheckCommand(opts.setupCommand, opts.cwd)
+                yield* Queue.offer(queue, new SetupCommandOutput({ iteration, output: setupResult.output, exitCode: setupResult.exitCode }))
               }
 
               // Implementation phase (with Progress inner loop)
@@ -333,8 +333,9 @@ export const LoopServiceLayer = Layer.effect(
                 let checkOutput: string | undefined
                 if (hasCommand(opts.checkCommand)) {
                   yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
-                  checkOutput = yield* runCheckCommand(opts.checkCommand, opts.cwd)
-                  yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: checkOutput }))
+                  const checkResult = yield* runCheckCommand(opts.checkCommand, opts.cwd)
+                  checkOutput = checkResult.output
+                  yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: checkResult.output, exitCode: checkResult.exitCode }))
                 }
 
                 const implementingSystemPrompt = implementingPrompt({
@@ -389,8 +390,9 @@ export const LoopServiceLayer = Layer.effect(
               let reviewCheckOutput: string | undefined
               if (hasCommand(opts.checkCommand)) {
                 yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
-                reviewCheckOutput = yield* runCheckCommand(opts.checkCommand, opts.cwd)
-                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: reviewCheckOutput }))
+                const reviewCheckResult = yield* runCheckCommand(opts.checkCommand, opts.cwd)
+                reviewCheckOutput = reviewCheckResult.output
+                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: reviewCheckResult.output, exitCode: reviewCheckResult.exitCode }))
               }
 
               const reviewingSystemPrompt = reviewingPrompt({
