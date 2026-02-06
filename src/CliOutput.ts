@@ -315,12 +315,23 @@ const computeEventOutput = (
         return prefix + output
       }
 
-      // Suppressed event: reset timer only, keep spinner visible
+      // Suppressed non-ping event: reset timer and return spinner output
+      const now = DateTime.nowUnsafe()
+      const rawDistance = DateTime.distance(now, state.lastRealEventTime)
+      const elapsedMs = Math.max(0, Math.abs(rawDistance))
+      const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000))
+
+      const prefix = state.lastOutputWasSpinner ? CLEAR_LINE : ""
+      const spinnerOutput = formatSpinner(elapsedSeconds, state.spinnerIndex)
+
       yield* Ref.set(spinnerState, {
         ...state,
-        lastRealEventTime: DateTime.nowUnsafe()
+        lastOutputWasSpinner: true,
+        lastRealEventTime: now,
+        spinnerIndex: (state.spinnerIndex + 1) % 10
       })
-      return null
+
+      return prefix + spinnerOutput
     }
   })
 
