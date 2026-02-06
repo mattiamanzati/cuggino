@@ -10,7 +10,13 @@ The `cuggino watch` command continuously processes backlog items by running the 
 cuggino watch
 ```
 
-No CLI options. All configuration is read from `.cuggino.json` via `StorageService.readConfig()`. See [setup-command](./setup-command.md) for details.
+### Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--verbose` | `false` | Enable verbose output (see [cli-output-formatting](./cli-output-formatting.md)) |
+
+All configuration is read from `.cuggino.json` via `StorageService.readConfig()`. See [setup-command](./setup-command.md) for details.
 
 ## Behavior
 

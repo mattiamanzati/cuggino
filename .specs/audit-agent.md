@@ -27,8 +27,9 @@ The audit agent:
    - **Improvement opportunities** — structural or organizational improvements to specs
 4. Emits findings as `TO_BE_DISCUSSED` markers (each emitted immediately as discovered, not batched)
 5. Checks existing TBD files to **avoid duplicating** findings that have already been raised
+6. Reads `.cuggino/memory.md` (read-only) to **avoid re-emitting** findings that the user has previously dismissed
 
-The agent is read-only — it does not make any code changes. It runs with `dangerouslySkipPermissions: true` for uninterrupted navigation.
+The agent is read-only — it does not make any code changes. It runs with `dangerouslySkipPermissions: true` for uninterrupted navigation. It receives the path to `.cuggino/memory.md` so it can check for previously dismissed findings.
 
 ## Findings
 
@@ -47,4 +48,4 @@ The audit agent runs as a background process that is interrupted when work arriv
 - The Claude CLI process is killed
 - Partially written findings are discarded (only fully emitted markers are persisted)
 - Findings already persisted to `.cuggino/tbd/` are kept
-- Each idle period starts a fresh audit run (no resumption — the agent checks existing TBD files to avoid duplicates)
+- Each idle period starts a fresh audit run (no resumption — the agent checks existing TBD files and the memory file to avoid duplicates and dismissed findings)

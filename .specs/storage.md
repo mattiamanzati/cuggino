@@ -14,6 +14,7 @@ All persistent data is stored under a `.cuggino/` folder relative to the current
   spec-issues/    <- Persisted spec issue reports
   backlog/        <- Focus items queued for implementation
   tbd/            <- To-be-discussed items from the audit agent
+  memory.md       <- PM memory: dismissed findings and user decisions
 ```
 
 ### `wip/`
@@ -39,6 +40,14 @@ Each file should be short and point to the relevant spec files rather than conta
 
 Contains "to be discussed" items — findings from the [audit agent](./audit-agent.md) that need human review. Each file (`<uuid>.md`) is a self-contained finding describing a discrepancy, unclear spec, or improvement opportunity. These are reviewed by the user via `cuggino` (PM mode).
 
+### `memory.md`
+
+A single markdown file (`.cuggino/memory.md`) maintained by the PM agent. It records decisions and dismissed findings from TBD triage sessions — for example, when the user reviews a TBD item and decides to skip it, the PM records a summary of the dismissed finding here.
+
+This file serves as persistent memory across PM sessions and audit runs:
+- The **PM agent** reads and writes this file to track dismissed findings and user decisions
+- The **audit agent** reads this file (read-only) to avoid re-emitting findings the user has already dismissed
+
 ## CugginoConfig Schema
 
 The config file is parsed and validated using an Effect Schema. Most fields are optional with defaults; `setupCommand` and `checkCommand` are truly optional (absent or empty string means "skip"):
@@ -51,7 +60,7 @@ const CugginoConfig = Schema.Struct({
   checkCommand: Schema.optionalKey(Schema.String),
   commit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false)),
   audit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false)),
-  notify: Schema.String.pipe(Schema.withDecodingDefaultKey(() => "none"))
+  notify: Schema.Union(Schema.Literal("none"), Schema.Literal("osx-notification")).pipe(Schema.withDecodingDefaultKey(() => "none" as const))
 })
 
 type CugginoConfig = typeof CugginoConfig.Type

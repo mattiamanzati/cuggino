@@ -2,18 +2,35 @@
 
 ## Overview
 
-This specification defines what the user sees in the terminal when running cuggino commands. All output formatting is handled by a single output layer that wraps event streams — commands do not write to stdout directly. The exception is the `setup` command, which is an interactive prompt flow and writes its configuration summary directly to stdout.
+This specification defines what the user sees in the terminal when running cuggino commands. The CLI output module is the **sole module** allowed to write to `process.stdout`. All other modules (loop, watch service, agents, etc.) communicate by emitting events on their streams — they never write to stdout directly. The CLI output layer subscribes to these event streams and handles all terminal rendering.
+
+The exception is the `setup` command, which is an interactive prompt flow and writes its configuration summary directly to stdout.
+
+## Verbose Flag
+
+The `run` and `watch` commands accept a `--verbose` flag (default: `false`). Note: `--verbose` intentionally has no `-v` short alias because the root command uses `-v` for `--version`. This flag is passed to the output formatting layer and controls the level of detail shown.
+
+When **verbose is off** (default), the following are hidden:
+- System messages
+- Agent messages (reasoning and explanations)
+- Tool results (file contents, command output)
+- Setup command output → replaced with `[Setup] Completed (exit {code})` or `[Setup] Failed (exit {code})`
+- Check command output → replaced with `[Check] Completed (exit {code})` or `[Check] Failed (exit {code})`
+
+When **verbose is on**, everything is shown (the current behavior).
+
+The following are always shown regardless of verbose mode: tool calls, markers, loop phase events, watch events, commit events, and the activity spinner.
 
 ## Event Display
 
 ### Agent Activity
 
-When agents are working, the user sees their activity streamed in real-time:
+When agents are working, the user sees their activity streamed in real-time (some items are verbose-only, see above):
 
-- **System messages** — shown dimmed, prefixed with `[System]`
-- **Agent messages** — shown dimmed (the agent's reasoning and explanations)
+- **System messages** — shown dimmed, prefixed with `[System]` *(verbose only)*
+- **Agent messages** — shown dimmed (the agent's reasoning and explanations) *(verbose only)*
 - **Tool calls** — shown in dim cyan, prefixed with `▶`, with the tool name and most relevant parameter (e.g., `▶ Read: /path/to/file.ts`, `▶ Bash: pnpm build`, `▶ Grep: pattern`)
-- **Tool results** — shown dimmed with line numbers, truncated to avoid flooding the terminal
+- **Tool results** — shown dimmed with line numbers, truncated to avoid flooding the terminal *(verbose only)*
 
 ### Markers
 
@@ -43,9 +60,11 @@ The loop emits events at phase transitions, displayed as:
 | Implementing start | Dim | `[Implementing] Starting...` |
 | Reviewing start | Dim | `[Reviewing] Starting...` |
 | Setup command starting | Dim | `[Setup] Running...` |
-| Setup command output | Dim | `[Setup] Output:` followed by output on the next line |
+| Setup command output (verbose) | Dim | `[Setup] Output:` followed by output on the next line |
+| Setup command output (non-verbose) | Dim | `[Setup] Completed (exit {code})` or `[Setup] Failed (exit {code})` |
 | Check command starting | Dim | `[Check] Running...` |
-| Check command output | Dim | `[Check] Output:` followed by output on the next line |
+| Check command output (verbose) | Dim | `[Check] Output:` followed by output on the next line |
+| Check command output (non-verbose) | Dim | `[Check] Completed (exit {code})` or `[Check] Failed (exit {code})` |
 | Loop approved | Bold Green | `[Loop] Implementation approved!` |
 | Spec issue found | Bold Red | `[Loop] Spec issue: {content}` followed by `Saved to: {filename}` on the next line (unstyled) |
 | Max iterations | Bold Yellow | `[Loop] Max iterations ({max}) reached` |

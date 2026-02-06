@@ -20,7 +20,7 @@ The root command handler spawns an interactive Claude agent with a system prompt
 
 - Read existing spec files to understand the current state
 - Discuss features, trade-offs, and design decisions with the user
-- Write and edit files **only** inside the specs folder, the spec issues folder, the backlog folder, and the TBD folder
+- Write and edit files **only** inside the specs folder, the spec issues folder, the backlog folder, the TBD folder, and the memory file (`.cuggino/memory.md`)
 - Review and critique existing specifications
 - Propose new specifications
 - Propose features, bug fixes, or tasks — and upon user confirmation, create backlog items (not implement them)
@@ -31,7 +31,7 @@ The root command handler spawns an interactive Claude agent with a system prompt
 
 ### What the Agent Must NOT Do
 
-- Write or modify any file outside the specs folder, spec issues folder, backlog folder, and TBD folder
+- Write or modify any file outside the specs folder, spec issues folder, backlog folder, TBD folder, and memory file
 - Run code, tests, or build commands
 - Implement features or write code — it must create backlog items instead
 
@@ -39,7 +39,7 @@ The root command handler spawns an interactive Claude agent with a system prompt
 
 The system prompt instructs the agent to act as a PM with the following constraints:
 
-- May only write or edit files inside the specs, spec-issues, backlog, and TBD folders
+- May only write or edit files inside the specs, spec-issues, backlog, and TBD folders, and the memory file (`.cuggino/memory.md`)
 - Must not write source code, configuration files, or scripts
 - Must be critical and thorough when reviewing specifications
 - Must ask clarifying questions when requirements are ambiguous
@@ -68,7 +68,10 @@ The system prompt instructs the agent to act as a PM with the following constrai
 - Prompts the user to discuss pending items
 - Never dismisses a TBD item about an implementation issue without asking the user
 - Resolves by updating specs or creating backlog items, then deleting the TBD file
+- When the user chooses to **dismiss** a TBD item (no spec change, no backlog item), the PM records a summary of the dismissed finding in `.cuggino/memory.md` before deleting the TBD file — this prevents the audit agent from re-emitting the same finding in future runs
 
 ## Interactive Session
 
 The PM session uses the agent's interactive mode — stdio is inherited so the user talks directly to the agent. The session runs with `dangerouslySkipPermissions: true` and exits with the agent's exit code.
+
+**Note:** File restrictions (specs, backlog, spec-issues, tbd, memory file only) are enforced via the system prompt, not technically. With `dangerouslySkipPermissions` enabled, the agent could write anywhere if it disregards its instructions. This is an accepted trust model for a developer tool.
