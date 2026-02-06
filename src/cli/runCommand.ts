@@ -14,7 +14,6 @@ export const runCommand = Command.make(
       Flag.withDescription("The focus area to work on (e.g., 'Implement user authentication')")
     ),
     verbose: Flag.boolean("verbose").pipe(
-      Flag.withAlias("v"),
       Flag.withDescription("Enable verbose output")
     )
   },

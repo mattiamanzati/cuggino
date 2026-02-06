@@ -8,7 +8,6 @@ export const watchCommand = Command.make(
   "watch",
   {
     verbose: Flag.boolean("verbose").pipe(
-      Flag.withAlias("v"),
       Flag.withDescription("Enable verbose output")
     )
   },
