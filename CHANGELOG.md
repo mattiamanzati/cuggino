@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.6
+
+### Patch Changes
+
+- [`41b14b8`](https://github.com/mattiamanzati/cuggino/commit/41b14b8a400cd677ff874935f7c9508a76118ae0) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - add codex support
+
 ## 0.0.5
 
 ### Patch Changes
