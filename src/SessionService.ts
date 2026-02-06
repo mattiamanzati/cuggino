@@ -54,7 +54,7 @@ export interface SessionServiceShape {
 }
 
 /**
- * Session service for managing session files in .sessions/ folder
+ * Session service for managing session files in .cuggino/wip/ folder
  */
 export class SessionService extends ServiceMap.Service<SessionService, SessionServiceShape>()("SessionService") {}
 
