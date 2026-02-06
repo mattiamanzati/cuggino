@@ -296,7 +296,6 @@ const computeEventOutput = (
 
       return prefix + spinnerOutput
     } else {
-      const prefix = state.lastOutputWasSpinner ? CLEAR_LINE : ""
       const formatted = isWatchLoopEvent(event)
         ? formatWatchLoopEvent(event)
         : isLoopPhaseEvent(event)
@@ -305,18 +304,23 @@ const computeEventOutput = (
             ? formatLlmMarkerEvent(event as LlmMarkerEvent, verbose)
             : formatLlmAgentEvent(event as LlmAgentEvent, verbose)
 
-      yield* Ref.set(spinnerState, {
-        ...state,
-        lastOutputWasSpinner: false,
-        lastRealEventTime: DateTime.nowUnsafe()
-      })
-
       if (formatted !== null) {
+        const prefix = state.lastOutputWasSpinner ? CLEAR_LINE : ""
+        yield* Ref.set(spinnerState, {
+          ...state,
+          lastOutputWasSpinner: false,
+          lastRealEventTime: DateTime.nowUnsafe()
+        })
         const output = formatted.endsWith("\n") ? formatted : formatted + "\n"
         return prefix + output
       }
 
-      return prefix || null
+      // Suppressed event: reset timer only, keep spinner visible
+      yield* Ref.set(spinnerState, {
+        ...state,
+        lastRealEventTime: DateTime.nowUnsafe()
+      })
+      return null
     }
   })
 
