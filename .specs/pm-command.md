@@ -1,16 +1,16 @@
-# PM Mode (Default Command)
+# PM Command
 
 ## Overview
 
-Running `cuggino` with no subcommand starts an interactive Claude session in **project manager (PM) mode**. The agent acts as a project manager — reading specs, discussing features with the user, writing specifications, managing the backlog, and resolving spec issues. The PM does not write code.
+Running `cuggino pm` starts an interactive session in **project manager (PM) mode**. The agent acts as a project manager — reading specs, discussing features with the user, writing specifications, managing the backlog, and resolving spec issues. The PM does not write code.
 
 ## Command
 
 ```bash
-cuggino
+cuggino pm
 ```
 
-No CLI options. The `specsPath` configuration is read from `.cuggino.json`, and the PM also relies on the standard `.cuggino/` folder structure (`spec-issues/`, `backlog/`, `tbd/`) via `StorageService`. See [setup-command](./setup-command.md) and [storage](./storage.md) for details.
+Supports the `--agent` / `-a` flag to select the LLM provider. The `specsPath` configuration is read from `.cuggino.json`, and the PM also relies on the standard `.cuggino/` folder structure (`spec-issues/`, `backlog/`, `tbd/`) via `StorageService`. See [setup-command](./setup-command.md) and [storage](./storage.md) for details.
 
 ## Behavior
 
