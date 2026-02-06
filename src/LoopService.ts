@@ -141,7 +141,7 @@ const performAutoCommit = (
     // Stage all changes except the specs folder
     yield* Effect.scoped(
       Effect.gen(function*() {
-        const addCmd = ChildProcess.make({ cwd, shell: true })`git add -A -- . ':!${specsPath}'`
+        const addCmd = ChildProcess.make("git", ["add", "-A", "--", ".", `:!${specsPath}`], { cwd })
         yield* ChildProcess.string(addCmd)
       })
     )
