@@ -39,11 +39,11 @@ import {
  */
 export class LoopError extends Data.TaggedError("LoopError")<{
   readonly phase: "planning" | "implementing" | "reviewing"
-  readonly message: string
+  readonly detail: string
   readonly cause?: unknown
 }> {
   override get message(): string {
-    return `Loop error in ${this.phase} phase: ${this.message}`
+    return `Loop error in ${this.phase} phase: ${this.detail}`
   }
 }
 
@@ -220,14 +220,14 @@ export const LoopServiceLayer = Layer.effect(
                 ),
                 Stream.runLast,
                 Effect.catchTag("LlmSessionError", (err) =>
-                  Effect.fail(new LoopError({ phase, message: err.message, cause: err }))
+                  Effect.fail(new LoopError({ phase, detail: err.message, cause: err }))
                 )
               )
 
               if (Option.isNone(last)) {
                 return yield* new LoopError({
                   phase,
-                  message: `Agent stream ended without emitting any marker`
+                  detail: `Agent stream ended without emitting any marker`
                 })
               }
 
@@ -236,14 +236,14 @@ export const LoopServiceLayer = Layer.effect(
                 const tag = "_tag" in lastValue ? String(lastValue._tag) : "unknown"
                 return yield* new LoopError({
                   phase,
-                  message: `Agent stream ended without emitting a marker (last event: ${tag})`
+                  detail: `Agent stream ended without emitting a marker (last event: ${tag})`
                 })
               }
 
               if (!Schema.is(terminalSchema)(last.value)) {
                 return yield* new LoopError({
                   phase,
-                  message: `Non-terminal marker received from ${phase} agent (got: ${last.value._tag})`
+                  detail: `Non-terminal marker received from ${phase} agent (got: ${last.value._tag})`
                 })
               }
 
