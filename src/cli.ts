@@ -17,9 +17,8 @@ const sharedLayer = NotificationServiceLayer(process.cwd()).pipe(
 )
 
 root.pipe(
-  Command.provide(sharedLayer),
   Command.provide(AgentLayerMap.layer),
   Command.run({ version: pkg.version }),
-  Effect.provide(NodeServices.layer),
+  Effect.provide(sharedLayer),
   NodeRuntime.runMain
 )

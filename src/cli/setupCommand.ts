@@ -6,11 +6,6 @@ import { AgentLayerMap } from "../AgentLayerMap.js"
 export const setupCommand = Command.make(
   "setup",
   {
-    agent: Flag.choice("agent", ["claude", "codex"]).pipe(
-      Flag.withAlias("a"),
-      Flag.withDefault("claude"),
-      Flag.withDescription("LLM provider to use")
-    )
   },
   () =>
     Effect.gen(function*() {
@@ -68,6 +63,4 @@ export const setupCommand = Command.make(
         console.log()
       })
     })
-).pipe(
-  Command.provide((input) => AgentLayerMap.get(input.agent))
 )
