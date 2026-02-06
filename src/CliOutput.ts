@@ -152,7 +152,8 @@ export const formatLlmAgentEvent = (event: LlmAgentEvent, verbose: boolean): str
 /**
  * Format an LLM marker event for console output with colors
  */
-export const formatLlmMarkerEvent = (event: LlmMarkerEvent): string => {
+export const formatLlmMarkerEvent = (event: LlmMarkerEvent, verbose: boolean): string | null => {
+  if (!verbose) return null
   switch (event._tag) {
     case "Note":
       return `\n${BOLD}${YELLOW}[NOTE]${RESET} ${event.content}\n`
@@ -254,7 +255,7 @@ export const formatWatchLoopEvent = (event: WatchLoopEvent): string => {
     case "WatchItemRetained":
       return `${DIM}[Watch] Retained: ${event.filename} (content changed during loop)${RESET}`
     case "WatchSpecIssueWaiting":
-      return `${DIM}[Watch] Spec issue detected, waiting for resolution...${RESET}`
+      return `${DIM}[Watch] Spec issue detected, waiting for resolution...${RESET}\x07`
     case "WatchAuditStarted":
       return `${CYAN}[Watch] Starting audit agent...${RESET}`
     case "WatchAuditEnded":
@@ -301,7 +302,7 @@ const computeEventOutput = (
         : isLoopPhaseEvent(event)
           ? formatLoopPhaseEvent(event, verbose)
           : isLlmMarkerEvent(event)
-            ? formatLlmMarkerEvent(event as LlmMarkerEvent)
+            ? formatLlmMarkerEvent(event as LlmMarkerEvent, verbose)
             : formatLlmAgentEvent(event as LlmAgentEvent, verbose)
 
       yield* Ref.set(spinnerState, {

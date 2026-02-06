@@ -37,6 +37,9 @@ export interface SessionServiceShape {
   /** Write code review file */
   readonly writeReview: (review: string) => Effect.Effect<void, SessionError>
 
+  /** Clear the review file if it exists */
+  readonly clearReview: () => Effect.Effect<void, SessionError>
+
   /** Read the code review (if exists) */
   readonly readReview: () => Effect.Effect<Option.Option<string>, SessionError>
 
@@ -133,6 +136,19 @@ export class SessionServiceMap extends LayerMap.Service<SessionServiceMap>()("Se
               cause instanceof SessionError
                 ? Effect.fail(cause)
                 : Effect.fail(new SessionError({ operation: "writeReview", sessionId, cause }))
+            )
+          ),
+
+        clearReview: () =>
+          Effect.gen(function*() {
+            if (yield* fs.exists(reviewPath)) {
+              yield* fs.remove(reviewPath)
+            }
+          }).pipe(
+            Effect.catch((cause) =>
+              cause instanceof SessionError
+                ? Effect.fail(cause)
+                : Effect.fail(new SessionError({ operation: "clearReview", sessionId, cause }))
             )
           ),
 

@@ -144,7 +144,7 @@ const performAutoCommit = (
     // Stage all changes except the specs folder
     yield* Effect.scoped(
       Effect.gen(function*() {
-        const addCmd = ChildProcess.make("git", ["add", "-A", "--", ".", `:!${specsPath}`], { cwd })
+        const addCmd = ChildProcess.make("git", ["add", "-A", "--", ".", `:!${specsPath}`, `:!.cuggino`], { cwd })
         yield* ChildProcess.string(addCmd)
       })
     )
@@ -319,6 +319,12 @@ export const LoopServiceLayer = Layer.effect(
                 yield* Queue.offer(queue, new SetupCommandStarting({ iteration }))
                 const setupResult = yield* runCheckCommand(opts.setupCommand, opts.cwd)
                 yield* Queue.offer(queue, new SetupCommandOutput({ iteration, output: setupResult.output, exitCode: setupResult.exitCode }))
+                if (setupResult.exitCode !== 0) {
+                  return yield* new LoopError({
+                    phase: "planning",
+                    detail: `Setup command failed with exit code ${setupResult.exitCode}`
+                  })
+                }
               }
 
               // Implementation phase (with Progress inner loop)
@@ -381,7 +387,8 @@ export const LoopServiceLayer = Layer.effect(
                 }
               }
 
-              // Reviewing phase
+              // Reviewing phase - clear stale review from previous iteration
+              yield* session.clearReview()
               yield* Queue.offer(queue, new ReviewingStart({ iteration }))
 
               let reviewCheckOutput: string | undefined
