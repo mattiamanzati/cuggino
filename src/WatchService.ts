@@ -152,16 +152,18 @@ const withAuditDuringIdle = (
   if (!audit) return idleEffect
 
   return Effect.acquireUseRelease(
-    // acquire: emit start event, fork the audit fiber
-Effect.forkChild(
-
-        Queue.offer(queue, new WatchAuditStarted({})).pipe(
-          Effect.andThen(runAuditAgent(agent, storage, queue, specsPath)),
-          Effect.tap(() => Queue.offer(queue, new WatchAuditEnded({}))),
-          Effect.onInterrupt(() => Queue.offer(queue, new WatchAuditInterrupted({}))),
-          Effect.delay(1000)
+    // acquire: delay then fork the audit fiber
+    Effect.sleep(1000).pipe(
+      Effect.andThen(
+        Effect.forkChild(
+          Queue.offer(queue, new WatchAuditStarted({})).pipe(
+            Effect.andThen(runAuditAgent(agent, storage, queue, specsPath)),
+            Effect.tap(() => Queue.offer(queue, new WatchAuditEnded({}))),
+            Effect.onInterrupt(() => Queue.offer(queue, new WatchAuditInterrupted({})))
+          )
         )
-      ),
+      )
+    ),
     // use: run the idle effect (folder watcher)
     (_fiber) => idleEffect,
     // release: always interrupt — no-op if already finished
