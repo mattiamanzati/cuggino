@@ -24,7 +24,7 @@ At the top of each loop iteration, the watch service checks whether it can proce
 - **Backlog empty and no spec issues** — waits for backlog items to arrive (emits "backlog empty" once)
 - **Backlog has items and no spec issues** — proceeds to processing immediately
 
-The watch service monitors both the spec-issues and backlog folders reactively for filesystem changes. When files are added or removed, the service re-evaluates the condition after a debounce period (to avoid reacting to partial writes). Events are emitted only on state transitions — not repeated when file counts change within the same logical state.
+The watch service monitors both the spec-issues and backlog folders reactively for filesystem changes. When files are added or removed, the service re-evaluates the condition after a 30-second debounce period (to avoid reacting to partial writes). Events are emitted only on state transitions — not repeated when file counts change within the same logical state.
 
 If `audit` is enabled in config, the [audit agent](./audit-agent.md) runs in the background during the waiting phase. See [Audit During Idle](#audit-during-idle).
 
@@ -33,15 +33,15 @@ If `audit` is enabled in config, the [audit agent](./audit-agent.md) runs in the
 1. List files in the backlog folder, sorted by filename
 2. Pick the **first** file (alphabetical order determines priority)
 3. Emit a "processing item" event
-4. Run the coding loop with the backlog file content as the focus
+4. Run the coding loop with a file reference (`@{filePath}`) to the backlog file as the focus
 5. Handle the loop outcome (see below)
 
 ## Loop Outcome Handling
 
 | Outcome | Action |
 |---------|--------|
-| **Approved** | Delete the backlog file (if unchanged during the loop) and emit "item completed". Return to waiting phase. |
-| **Max iterations reached** | Same as approved — delete the file if unchanged. |
+| **Approved** | Delete the backlog file (if unchanged during the loop) and emit "item completed". If the file content changed during the loop, emit "item retained" instead and keep the file for re-processing. Return to waiting phase. |
+| **Max iterations reached** | Same as approved — delete the file if unchanged, or emit "item retained" if changed. |
 | **Spec issue** | Do NOT delete the backlog file. The spec issue is persisted to `.cuggino/spec-issues/`. Return to waiting phase — the watcher will detect the spec issue files and wait for resolution. |
 
 ### Safe Deletion
@@ -102,6 +102,7 @@ The backlog file is intentionally kept when a spec issue occurs. Since the watch
 
 When `audit` is enabled in config, the watch command spawns an [audit agent](./audit-agent.md) in the background while in the waiting phase.
 
+- The audit agent spawn is delayed by a short period (e.g., 1 second) so that if work arrives immediately after entering the waiting phase, the agent is never started
 - The audit agent's activity (tool calls, reasoning, findings) is displayed in the terminal alongside the waiting events
 - When the audit agent discovers a finding, it is persisted to `.cuggino/tbd/` and a "TBD item found" event is emitted
 - When the waiting phase ends (work arrives), the audit agent is **interrupted** — any in-progress work is discarded, but findings already persisted are kept
@@ -138,7 +139,7 @@ The notification plays a sound (`-sound default`) to alert the user, even if the
 
 #### Click Behavior (Best-Effort)
 
-Clicking the notification attempts to bring the editor to the foreground. The `-execute` flag runs an AppleScript that activates the editor application and raises the window whose title contains the repo name. The simpler `-activate` approach does not work reliably with all editors (e.g., Cursor).
+Clicking the notification attempts to bring the relevant application to the foreground. The `-execute` flag runs an AppleScript that finds any open application with a window title containing the repo name and activates it — bringing it to the front even if it's behind other windows. The simpler `-activate` approach does not work reliably with all editors (e.g., Cursor).
 
 This may not work in all environments. If clicking does nothing or focuses the wrong window, the sound and notification text still serve their purpose as an alert.
 

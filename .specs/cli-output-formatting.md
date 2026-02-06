@@ -2,7 +2,7 @@
 
 ## Overview
 
-This specification defines what the user sees in the terminal when running cuggino commands. All output formatting is handled by a single output layer that wraps event streams — commands do not write to stdout directly.
+This specification defines what the user sees in the terminal when running cuggino commands. All output formatting is handled by a single output layer that wraps event streams — commands do not write to stdout directly. The exception is the `setup` command, which is an interactive prompt flow and writes its configuration summary directly to stdout.
 
 ## Event Display
 
@@ -12,7 +12,7 @@ When agents are working, the user sees their activity streamed in real-time:
 
 - **System messages** — shown dimmed, prefixed with `[System]`
 - **Agent messages** — shown dimmed (the agent's reasoning and explanations)
-- **Tool calls** — shown in dim cyan, with the tool name and most relevant parameter (e.g., `Read: /path/to/file.ts`, `Bash: pnpm build`, `Grep: pattern`)
+- **Tool calls** — shown in dim cyan, prefixed with `▶`, with the tool name and most relevant parameter (e.g., `▶ Read: /path/to/file.ts`, `▶ Bash: pnpm build`, `▶ Grep: pattern`)
 - **Tool results** — shown dimmed with line numbers, truncated to avoid flooding the terminal
 
 ### Markers
@@ -43,11 +43,11 @@ The loop emits events at phase transitions, displayed as:
 | Implementing start | Dim | `[Implementing] Starting...` |
 | Reviewing start | Dim | `[Reviewing] Starting...` |
 | Setup command starting | Dim | `[Setup] Running...` |
-| Setup command output | Dim | `[Setup] Output: {truncated output}` |
+| Setup command output | Dim | `[Setup] Output:` followed by output on the next line |
 | Check command starting | Dim | `[Check] Running...` |
-| Check command output | Dim | `[Check] Output: {truncated output}` |
+| Check command output | Dim | `[Check] Output:` followed by output on the next line |
 | Loop approved | Bold Green | `[Loop] Implementation approved!` |
-| Spec issue found | Bold Red | `[Loop] Spec issue: {content}` + saved location |
+| Spec issue found | Bold Red | `[Loop] Spec issue: {content}` followed by `Saved to: {filename}` on the next line (unstyled) |
 | Max iterations | Bold Yellow | `[Loop] Max iterations ({max}) reached` |
 | Commit succeeded | Bold Magenta | `[Commit] {hash}: {message}` |
 | Commit failed | Bold Red | `[Commit] Failed: {message}` |
@@ -62,6 +62,7 @@ When running `cuggino watch`, additional events are displayed:
 | Backlog empty | Dim | `[Watch] Backlog empty, waiting for new items...` (with terminal bell) |
 | Processing item | Dim | `[Watch] Processing: {filename}` |
 | Item completed | Dim | `[Watch] Completed: {filename}` |
+| Item retained | Dim | `[Watch] Retained: {filename} (content changed during loop)` |
 | Audit started | Cyan | `[Watch] Starting audit agent...` |
 | Audit ended | Cyan | `[Watch] Audit agent finished.` |
 | Audit interrupted | Cyan | `[Watch] Audit agent interrupted, work arrived.` |

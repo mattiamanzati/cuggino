@@ -41,7 +41,7 @@ Contains "to be discussed" items — findings from the [audit agent](./audit-age
 
 ## CugginoConfig Schema
 
-The config file is parsed and validated using an Effect Schema. Most fields are optional with defaults; `setupCommand` and `checkCommand` are truly optional (absent means "skip"):
+The config file is parsed and validated using an Effect Schema. Most fields are optional with defaults; `setupCommand` and `checkCommand` are truly optional (absent or empty string means "skip"):
 
 ```typescript
 const CugginoConfig = Schema.Struct({
@@ -58,3 +58,5 @@ type CugginoConfig = typeof CugginoConfig.Type
 ```
 
 A completely empty `{}` file (or missing file) produces a valid config with defaults for most fields and `undefined` for `setupCommand`/`checkCommand`.
+
+An empty string `""` for `setupCommand` or `checkCommand` is treated the same as absent — the corresponding phase is skipped.

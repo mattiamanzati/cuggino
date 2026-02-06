@@ -38,6 +38,7 @@ The system uses three types of agents in a loop:
 - **Purpose**: Verify implementation matches **specs** (read-only, no code changes)
 - **Important**: The specs are the source of truth, not the plan. The plan is just a subset of tasks derived from specs.
 - **When initial commit hash provided** (via `commit` config): Focuses review on changes introduced since that commit
+- **When no initial commit hash** (commit disabled): The reviewer relies on the session file (plan + progress notes) and the specs to evaluate what was implemented, without a git diff baseline
 - **Outcome**:
   - **Approved** — changes match specs, loop finishes
   - **Request changes** — writes a code review describing what doesn't match, loop goes back to planning
@@ -81,7 +82,7 @@ When any agent emits a spec issue, the loop **exits immediately**. No further ag
 
 After each planning phase completes, the system can optionally run a setup command to prepare the environment before implementation begins (e.g., installing dependencies, running builds).
 
-- **Optional**: Only runs if `setupCommand` is configured in `.cuggino.json`
+- **Optional**: Only runs if `setupCommand` is configured in `.cuggino.json` and is non-empty
 - **Announced**: A "starting" event is emitted before the command runs, so the user knows what's happening
 - **Failure is non-blocking**: The loop continues to implementation regardless of setup outcome
 - **Runs once per planning phase**: Not repeated for each implementing agent iteration
@@ -90,7 +91,7 @@ After each planning phase completes, the system can optionally run a setup comma
 
 Before each implementing agent iteration and before the reviewing agent, the system can optionally run a check command to verify the codebase state (linting, type checking, tests, etc.).
 
-- **Optional**: Only runs if `checkCommand` is configured in `.cuggino.json`
+- **Optional**: Only runs if `checkCommand` is configured in `.cuggino.json` and is non-empty
 - **Announced**: A "starting" event is emitted before the command runs, so the user knows what's happening
 - **Output is passed to the agent**: The agent can use check failures to understand what needs fixing
 - **Failure is non-blocking**: The loop continues — check output (including errors) is context for the agent
@@ -113,7 +114,7 @@ When the `commit` option is enabled in `.cuggino.json`, the loop automatically c
 - The initial HEAD commit hash is captured before the loop starts, so the reviewer can focus on changes introduced since that baseline
 - If there are no changes to commit, the commit is skipped
 - If the commit fails, the loop continues (the failure is reported but does not stop the loop)
-- If the repository has no commits yet, the reviewer falls back to reviewing the full codebase
+- If the repository has no commits yet, capturing the initial commit hash fails gracefully (returns null), and the reviewer reviews the full codebase without a git diff baseline
 
 ## Main Loop Flow
 
@@ -175,9 +176,9 @@ Project settings are stored in `.cuggino.json`, created and updated interactivel
 
 ## Sessions
 
-Each loop run is tracked in a **session** — an append-only file that starts with the plan and accumulates progress notes and markers as agents work. Sessions are identified by UUIDv7 and stored in `.cuggino/wip/`. Session files are automatically cleaned up when the session ends (whether approved, spec issue, or max iterations reached).
+Each loop run is tracked in a **session** — a file that is initialized with the plan content and then appended to as agents work, accumulating progress notes and markers. Sessions are identified by UUIDv7 and stored in `.cuggino/wip/`. Session files are automatically cleaned up when the session ends (whether approved, spec issue, or max iterations reached).
 
-A separate review file may be created alongside the session when the reviewer requests changes — this is fed back to the planning agent on the next iteration.
+When the reviewer emits REQUEST_CHANGES, a review file is created alongside the session containing the detailed code review — this is fed back to the planning agent on the next iteration.
 
 ## Technology Stack
 
@@ -193,4 +194,10 @@ Agents are executed by spawning `claude` CLI processes. There are two modes:
 - **Streaming mode** — for the autonomous loop agents (planning, implementing, reviewing, audit). The output is parsed in real-time to detect markers and track progress. Events are formatted and displayed to the user.
 - **Interactive mode** — for PM mode (the default command). The user talks to the agent directly in their terminal. No stream parsing or event system.
 
-**Important:** The Claude CLI process must be spawned using Node.js native `child_process` module, not the Effect `ChildProcess` module (which has known issues with streaming output from long-running processes). Other short-lived commands (check commands, git operations) may use the Effect `ChildProcess` module.
+**Important:** All Claude CLI processes (both streaming and interactive) must be spawned using Node.js native `child_process` module, not the Effect `ChildProcess` module (which has known issues with streaming output from long-running processes). Other short-lived commands (check commands, git operations) may use the Effect `ChildProcess` module.
+
+**Note:** Streaming mode currently relies on Claude CLI-specific flags (e.g., `--include-partial-messages` for spinner heartbeats, `--verbose` for agent activity). These are specific to the Claude CLI and may not apply to other LLM providers.
+
+### Working Directory
+
+Service layers (`StorageServiceLayer`, `NotificationServiceLayer`) accept a `cwd` path parameter. The CLI entry point (`cli.ts`) seeds this with `process.cwd()` — the only place in the codebase that calls `process.cwd()`. All other code receives the working directory through service layers.

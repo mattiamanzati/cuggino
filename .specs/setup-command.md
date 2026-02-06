@@ -24,6 +24,8 @@ No options. Everything is configured interactively.
 
 Each prompt pre-fills with the current value from the existing config file. If no config exists, built-in defaults are used.
 
+**Known limitation:** The `maxIterations` integer prompt and the `notify` select prompt do not currently pre-fill the existing value.
+
 | Order | Setting | Prompt type | Default | Description |
 |-------|---------|-------------|---------|-------------|
 | 1 | `specsPath` | Text | `.specs` | Path to the specifications folder |

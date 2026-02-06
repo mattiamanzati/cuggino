@@ -14,9 +14,9 @@ cuggino run --focus "Implement user authentication"
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--focus` / `-f` | (required) | The focus area to work on — a specific feature or task from the specs |
+| `--focus` / `-f` | (required) | The focus area to work on — a text description or a file reference via `@path` (e.g., `@backlog/001-task.md`) |
 
-All other configuration options (`specsPath`, `maxIterations`, `setupCommand`, `checkCommand`, `commit`) are read from `.cuggino.json`. See [setup-command](./setup-command.md) for details.
+All other configuration options (`specsPath`, `maxIterations`, `setupCommand`, `checkCommand`, `commit`) are read from `.cuggino.json`. The `audit` and `notify` options are watch-mode-only and are not used by the run command. See [setup-command](./setup-command.md) for details.
 
 ## Behavior
 
@@ -28,7 +28,13 @@ All other configuration options (`specsPath`, `maxIterations`, `setupCommand`, `
 
 ## Exit Behavior
 
-The command exits when the loop finishes — whether by approval, spec issue, or max iterations. The process exit code reflects whether the loop succeeded or failed.
+The command exits when the loop finishes — whether by approval, spec issue, or max iterations.
+
+| Loop outcome | Exit code |
+|---|---|
+| **Approved** | `0` |
+| **Spec issue** | `1` |
+| **Max iterations reached** | `1` |
 
 ## Differences from Watch Command
 
