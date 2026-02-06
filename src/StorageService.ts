@@ -71,13 +71,13 @@ export class StorageService extends ServiceMap.Service<StorageService, StorageSe
 /**
  * Create the StorageService layer
  */
-export const StorageServiceLayer = Layer.effect(
+export const StorageServiceLayer = (cwd: string) => Layer.effect(
   StorageService,
   Effect.gen(function*() {
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
 
-    const rootDir = path.join(".", ".cuggino")
+    const rootDir = path.join(cwd, ".cuggino")
     const wipDir = path.join(rootDir, "wip")
     const specIssuesDir = path.join(rootDir, "spec-issues")
     const backlogDir = path.join(rootDir, "backlog")
@@ -125,7 +125,7 @@ export const StorageServiceLayer = Layer.effect(
 
       readConfig: () =>
         Effect.gen(function*() {
-          const configFilePath = path.join(".", ".cuggino.json")
+          const configFilePath = path.join(cwd, ".cuggino.json")
           return yield* fs.readFileString(configFilePath).pipe(
             Effect.map((content) => decodeCugginoConfig(content)),
             Effect.catch(() => Effect.succeed(decodeCugginoConfig("{}")))
@@ -134,7 +134,7 @@ export const StorageServiceLayer = Layer.effect(
 
       writeConfig: (config: CugginoConfig) =>
         Effect.gen(function*() {
-          const configFilePath = path.join(".", ".cuggino.json")
+          const configFilePath = path.join(cwd, ".cuggino.json")
           const encoded = encodeCugginoConfig(config) + "\n"
           yield* fs.writeFileString(configFilePath, encoded)
         }).pipe(

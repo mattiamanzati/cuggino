@@ -22,7 +22,7 @@ export const runCommand = Command.make(
       const stream = loop.run({
         focus: args.focus,
         specsPath: config.specsPath,
-        cwd: ".",
+        cwd: process.cwd(),
         maxIterations: config.maxIterations,
         setupCommand: config.setupCommand,
         checkCommand: config.checkCommand,

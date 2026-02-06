@@ -109,7 +109,7 @@ const runAuditAgent = (
   Effect.gen(function*() {
     const auditOpts = { specsPath, tbdPath: storage.tbdDir }
     const rawStream = agent.spawn({
-      cwd: ".",
+      cwd: process.cwd(),
       prompt: auditPrompt(auditOpts),
       systemPrompt: auditSystemPrompt(auditOpts),
       dangerouslySkipPermissions: true
@@ -261,7 +261,7 @@ export const WatchServiceLayer = Layer.effect(
               yield* loop.run({
                 focus: `@${filePath}`,
                 specsPath: opts.specsPath,
-                cwd: ".",
+                cwd: process.cwd(),
                 maxIterations: opts.maxIterations,
                 setupCommand: opts.setupCommand,
                 checkCommand: opts.checkCommand,

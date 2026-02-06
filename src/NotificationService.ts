@@ -1,4 +1,4 @@
-import { Effect, Layer, Path, ServiceMap } from "effect"
+import { Effect, Layer, ServiceMap } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 
 export interface NotificationServiceShape {
@@ -18,33 +18,27 @@ const escapeAppleScript = (s: string): string =>
 /**
  * Detect the repository name from Git, falling back to folder basename.
  */
-const detectRepoName: Effect.Effect<string, never, ChildProcessSpawner.ChildProcessSpawner | Path.Path> =
-  Effect.gen(function*() {
-    const path = yield* Path.Path
-    const absoluteCwd = path.resolve(".")
-    return yield* Effect.scoped(
-      Effect.gen(function*() {
-        const cmd = ChildProcess.make({ cwd: ".", shell: true })`git rev-parse --show-toplevel`
-        const output = (yield* ChildProcess.string(cmd)).trim()
-        const parts = output.split("/")
-        return parts[parts.length - 1] || path.basename(absoluteCwd) || "cuggino"
-      })
-    ).pipe(
-      Effect.catch(() => {
-        return Effect.succeed(path.basename(absoluteCwd) || "cuggino")
-      })
-    )
-  })
+const detectRepoName = (cwd: string): Effect.Effect<string, never, ChildProcessSpawner.ChildProcessSpawner> =>
+  Effect.scoped(
+    Effect.gen(function*() {
+      const cmd = ChildProcess.make({ cwd, shell: true })`git rev-parse --show-toplevel`
+      const output = (yield* ChildProcess.string(cmd)).trim()
+      const parts = output.split("/")
+      return parts[parts.length - 1] || cwd.split("/").pop() || "cuggino"
+    })
+  ).pipe(
+    Effect.catch(() => {
+      return Effect.succeed(cwd.split("/").pop() || "cuggino")
+    })
+  )
 
 /**
  * Create the NotificationService layer.
  */
-export const NotificationServiceLayer = Layer.effect(
+export const NotificationServiceLayer = (cwd: string) => Layer.effect(
   NotificationService,
   Effect.gen(function*() {
-    const path = yield* Path.Path
-    const absoluteCwd = path.resolve(".")
-    const repoName = yield* detectRepoName
+    const repoName = yield* detectRepoName(cwd)
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const provide = Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner)
 
@@ -75,7 +69,7 @@ export const NotificationServiceLayer = Layer.effect(
               "-title", title,
               "-message", body,
               "-sound", "default",
-              "-group", `cuggino:${absoluteCwd}`,
+              "-group", `cuggino:${cwd}`,
               "-execute", `osascript -e '${focusScript}'`
             ])
             yield* ChildProcess.string(cmd).pipe(provide, Effect.ignore)
