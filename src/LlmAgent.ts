@@ -13,10 +13,6 @@ export interface LlmAgentSpawnOptions {
   readonly systemPrompt?: string
   /** Skip permission checks (use with caution) */
   readonly dangerouslySkipPermissions?: boolean
-  /** Session ID for the Claude CLI (--session-id <value>) */
-  readonly sessionId?: string
-  /** Resume an existing session by ID (--resume <value>) */
-  readonly resumeSessionId?: string
 }
 
 /**
