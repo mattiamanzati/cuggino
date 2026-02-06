@@ -156,9 +156,9 @@ const withAuditDuringIdle = (
     Effect.forkChild(
       Effect.sleep(1000).pipe(
         Effect.andThen(Queue.offer(queue, new WatchAuditStarted({}))),
-        Effect.andThen(runAuditAgent(agent, storage, queue, specsPath)),
+        Effect.andThen(runAuditAgent(agent, storage, queue, specsPath).pipe(Effect.onInterrupt(() => Queue.offer(queue, new WatchAuditInterrupted({}))))),
         Effect.tap(() => Queue.offer(queue, new WatchAuditEnded({}))),
-        Effect.onInterrupt(() => Queue.offer(queue, new WatchAuditInterrupted({})))
+        
       )
     ),
     // use: run the idle effect (folder watcher) immediately

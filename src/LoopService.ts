@@ -66,7 +66,7 @@ export interface LoopRunOptions {
 export interface LoopServiceShape {
   readonly run: (opts: LoopRunOptions) => Stream.Stream<
     LoopEvent,
-    LoopError | SessionError | StorageError,
+    LoopError | LlmSessionError | SessionError | StorageError,
     ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService
   >
 }
@@ -199,7 +199,7 @@ export const LoopServiceLayer = Layer.effect(
 
     return {
       run: (opts) =>
-        Stream.callback<LoopEvent, LoopError | SessionError | StorageError, ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService>((queue) => {
+        Stream.callback<LoopEvent, LoopError | LlmSessionError | SessionError | StorageError, ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService>((queue) => {
           /**
            * Helper to run a phase stream, emit events to the queue, and return the terminal marker.
            * Captures `queue` from the Stream.callback closure.
@@ -208,7 +208,7 @@ export const LoopServiceLayer = Layer.effect(
             phaseStream: Stream.Stream<LlmAgentEvent | TMarker, LlmSessionError>,
             phase: "planning" | "implementing" | "reviewing",
             terminalSchema: TEnd
-          ): Effect.Effect<Schema.Schema.Type<TEnd>, LoopError | SessionError, SessionService> =>
+          ): Effect.Effect<Schema.Schema.Type<TEnd>, LoopError | LlmSessionError | SessionError, SessionService> =>
             Effect.gen(function*() {
               const session = yield* SessionService
               const last = yield* phaseStream.pipe(
@@ -221,10 +221,7 @@ export const LoopServiceLayer = Layer.effect(
                     }
                   })
                 ),
-                Stream.runLast,
-                Effect.catchTag("LlmSessionError", (err) =>
-                  Effect.fail(new LoopError({ phase, detail: err.message, cause: err }))
-                )
+                Stream.runLast
               )
 
               if (Option.isNone(last)) {
