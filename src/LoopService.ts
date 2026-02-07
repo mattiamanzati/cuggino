@@ -311,7 +311,8 @@ export const LoopServiceLayer = Layer.effect(
                 specsPath: opts.specsPath,
                 focus: opts.focus,
                 planPath: tempPlanPath,
-                codeReview: Option.isSome(codeReview) ? codeReview.value : undefined
+                codeReview: Option.isSome(codeReview) ? codeReview.value : undefined,
+                previousPlanPath: Option.isSome(codeReview) ? sessionPath : undefined
               })
 
               const planEvents = agent.spawn({

@@ -16,6 +16,7 @@ export interface PlanningPromptOptions {
   readonly focus: string
   readonly planPath: string
   readonly codeReview?: string
+  readonly previousPlanPath?: string
 }
 
 export interface ImplementingPromptOptions {
@@ -107,9 +108,22 @@ ${opts.codeReview}
 `
     : ""
 
+  const previousPlanRow = opts.previousPlanPath
+    ? `\n| ${opts.previousPlanPath} | READ-ONLY |`
+    : ""
+
+  const steps = opts.previousPlanPath
+    ? `1. Read the previous plan from ${opts.previousPlanPath} and the review feedback above
+2. Read specs from ${opts.specsPath}
+3. Investigate the codebase
+4. Write a revised plan to ${opts.planPath} that accounts for completed work, tasks that need fixing, and remaining tasks`
+    : `1. Read specs from ${opts.specsPath}
+2. Investigate the codebase
+3. Write plan to ${opts.planPath}`
+
   return `# Planning Task
 
-Your current focus is: 
+Your current focus is:
 ${opts.focus}
 
 DO NOT PLAN FEATURES NOT INCLUDED IN THE FOCUS!
@@ -119,14 +133,12 @@ ${codeReviewSection}
 
 | Path | Permission |
 |------|------------|
-| ${opts.specsPath} | READ-ONLY |
+| ${opts.specsPath} | READ-ONLY |${previousPlanRow}
 | ${opts.planPath} | WRITE |
 
 ## Steps
 
-1. Read specs from ${opts.specsPath}
-2. Investigate the codebase
-3. Write plan to ${opts.planPath}
+${steps}
 
 ## Plan Format
 
