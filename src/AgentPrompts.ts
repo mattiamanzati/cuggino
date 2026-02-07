@@ -121,6 +121,14 @@ ${opts.codeReview}
 2. Investigate the codebase
 3. Write plan to ${opts.planPath}`
 
+  const selfContainedNote = opts.previousPlanPath
+    ? `
+## Self-Contained Output
+
+The revised plan must be self-contained — it replaces the previous plan entirely. Do not reference or depend on the previous plan (e.g., "as in the previous plan...", "same as before..."). The implementing agent only sees the current plan, so all necessary information must be included.
+`
+    : ""
+
   return `# Planning Task
 
 Your current focus is:
@@ -139,7 +147,7 @@ ${codeReviewSection}
 ## Steps
 
 ${steps}
-
+${selfContainedNote}
 ## Plan Format
 
 \`\`\`markdown
