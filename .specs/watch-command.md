@@ -14,6 +14,7 @@ cuggino watch
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `--agent` / `-a` | `claude` | LLM provider to use (`claude` or `codex`). See [cli-structure](./cli-structure.md). |
 | `--verbose` | `false` | Enable verbose output (see [cli-output-formatting](./cli-output-formatting.md)) |
 
 All configuration is read from `.cuggino.json` via `StorageService.readConfig()`. See [setup-command](./setup-command.md) for details.

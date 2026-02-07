@@ -14,10 +14,11 @@ cuggino run --focus "Implement user authentication"
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `--agent` / `-a` | `claude` | LLM provider to use (`claude` or `codex`). See [cli-structure](./cli-structure.md). |
 | `--focus` / `-f` | (required) | The focus area to work on — a text description or a file reference via `@path` (e.g., `@backlog/001-task.md`). The `@path` syntax is resolved by the underlying LLM CLI (e.g., Claude CLI), not by cuggino itself. |
 | `--verbose` | `false` | Enable verbose output (see [cli-output-formatting](./cli-output-formatting.md)) |
 
-All other configuration options (`specsPath`, `maxIterations`, `setupCommand`, `checkCommand`, `commit`) are read from `.cuggino.json`. The `audit` and `notify` options are watch-mode-only and are not used by the run command. See [setup-command](./setup-command.md) for details.
+All other configuration options (`specsPath`, `maxIterations`, `setupCommand`, `checkCommand`, `commit`, `push`) are read from `.cuggino.json`. The `audit` and `notify` options are watch-mode-only and are not used by the run command. See [setup-command](./setup-command.md) for details.
 
 ## Behavior
 

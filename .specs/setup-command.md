@@ -33,8 +33,9 @@ Each prompt pre-fills with the current value from the existing config file. If n
 | 3 | `setupCommand` | Text | _(empty)_ | Command to run after planning, before implementation (leave empty to skip) |
 | 4 | `checkCommand` | Text | _(empty)_ | Command to run before implementing and reviewing agents (leave empty to skip) |
 | 5 | `commit` | Toggle | `false` | Auto-commit after each implementing agent invocation |
-| 6 | `audit` | Toggle | `false` | Run background audit agent during idle time |
-| 7 | `notify` | Select | `none` | Notification method when watch mode is idle (`none`, `osx-notification`) |
+| 6 | `push` | Text | _(empty)_ | Remote/branch to push to after each commit (leave empty to skip) |
+| 7 | `audit` | Toggle | `false` | Run background audit agent during idle time |
+| 8 | `notify` | Select | `none` | Notification method when watch mode is idle (`none`, `osx-notification`) |
 
 ### Prompt Messages
 
@@ -43,6 +44,7 @@ Each prompt pre-fills with the current value from the existing config file. If n
 - `setupCommand`: "Setup command (install deps, build, etc.) — leave empty to skip"
 - `checkCommand`: "Check command (linting, type checking, tests) — leave empty to skip"
 - `commit`: "Auto-commit after each implementation step"
+- `push`: "Push to remote after each commit (e.g., origin/main) — leave empty to skip"
 - `audit`: "Run audit agent during idle time"
 - `notify`: "Notification method when watch mode is idle"
 

@@ -249,7 +249,7 @@ Description of the issue...
 **DONE** - Picked task is complete (exit):
 \`\`\`
 <DONE>
-Quick summary of what was implemented (git commit message style)
+Quick summary of what was implemented (git commit message style, do not reference contents of the plan or review or spec, describe in general terms)
 </DONE>
 \`\`\``
 }

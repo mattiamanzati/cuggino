@@ -16,6 +16,10 @@ The `LlmAgent` service is responsible for:
 
 Streaming-mode agents produce a stream of events. The event types and their semantics are provider-agnostic — the abstraction normalizes provider-specific output into a common event model. Consumers (loop, CLI output) operate on this common model.
 
+### Interactive Tool Restrictions
+
+Streaming-mode agents run autonomously without user interaction. Providers must disable any interactive or user-facing tools (e.g., Claude's `AskUserQuestion`) that could pause the loop waiting for user input. Each provider is responsible for disabling the relevant tools using provider-specific mechanisms.
+
 ## Provider Selection
 
 The active provider is selected at runtime via the `--agent` CLI flag (default: `claude`). A `LayerMap` service is defined with a lookup that maps agent names to their `LlmAgent` provider layers. Each command uses `Command.provide` to receive the `--agent` value, retrieve the provider layer via the `LayerMap`'s `.get(agentKey)`, and compose the dependent services (LoopService, WatchService, etc.) on top.
