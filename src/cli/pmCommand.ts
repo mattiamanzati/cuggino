@@ -34,11 +34,12 @@ export const pmCommand = Command.make(
       })
 
       if (Option.isSome(args.telegram)) {
+        const telegramSuffix = "\n\nIMPORTANT: You are responding via Telegram. Use plain text only — do NOT use markdown formatting (no bold, italic, headers, code blocks, or other markdown syntax). Keep messages concise — Telegram has a 4096 character limit per message."
         yield* runTelegramPm({
           botToken: args.telegram.value,
           agent,
           storage,
-          systemPrompt
+          systemPrompt: systemPrompt + telegramSuffix
         })
       } else {
         const exitCode = yield* agent.interactive({
