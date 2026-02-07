@@ -1,4 +1,5 @@
 import { Effect } from "effect"
+import { getUpdates, sendMessage, type TelegramError } from "./TelegramService.js"
 import type { LlmAgentShape } from "./LlmAgent.js"
 import type { StorageServiceShape } from "./StorageService.js"
 
@@ -46,6 +47,24 @@ export const splitMessage = (text: string, limit: number = 4096): Array<string> 
 
   return chunks
 }
+
+export const authenticate = (token: string): Effect.Effect<{ chatId: number; offset: number }, TelegramError> =>
+  Effect.gen(function*() {
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    process.stdout.write(`Auth code: ${code} — enter this in the Telegram chat to authenticate\n`)
+
+    let offset = 0
+    while (true) {
+      const updates = yield* getUpdates(token, offset, 30)
+      for (const update of updates) {
+        offset = update.update_id + 1
+        if (update.message?.text?.trim() === code) {
+          yield* sendMessage(token, update.message.chat.id, "Authenticated! You can now send messages.")
+          return { chatId: update.message.chat.id, offset }
+        }
+      }
+    }
+  })
 
 export const runTelegramPm = (_options: RunTelegramPmOptions): Effect.Effect<void> =>
   Effect.void
