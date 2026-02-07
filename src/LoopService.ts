@@ -9,7 +9,6 @@ import { extractMarkers, type MarkerExtractorConfig } from "./extractMarkers.js"
 import {
   Note,
   SpecIssue,
-  Progress,
   Done,
   Approved,
   RequestChanges,
@@ -91,12 +90,10 @@ const planningMarkerConfig: MarkerExtractorConfig<{
 const implementingMarkerConfig: MarkerExtractorConfig<{
   NOTE: Note
   SPEC_ISSUE: SpecIssue
-  PROGRESS: Progress
   DONE: Done
 }> = {
   NOTE: (content) => new Note({ content }),
   SPEC_ISSUE: (content) => new SpecIssue({ content }),
-  PROGRESS: (content) => new Progress({ content }),
   DONE: (content) => new Done({ content })
 }
 
@@ -356,68 +353,58 @@ export const LoopServiceLayer = Layer.effect(
                 }
               }
 
-              // Implementation phase (with Progress inner loop)
-              let implementationDone = false
+              // Implementation phase
+              yield* Queue.offer(queue, new ImplementingStart({ iteration }))
 
-              while (!implementationDone) {
-                yield* Queue.offer(queue, new ImplementingStart({ iteration }))
+              let checkOutput: string | undefined
+              if (hasCommand(opts.checkCommand)) {
+                yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
+                const checkResult = yield* runCheckCommand(opts.checkCommand, opts.cwd)
+                checkOutput = checkResult.output
+                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: checkResult.output, exitCode: checkResult.exitCode }))
+              }
 
-                let checkOutput: string | undefined
-                if (hasCommand(opts.checkCommand)) {
-                  yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
-                  const checkResult = yield* runCheckCommand(opts.checkCommand, opts.cwd)
-                  checkOutput = checkResult.output
-                  yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: checkResult.output, exitCode: checkResult.exitCode }))
-                }
+              const implementingSystemPrompt = implementingPrompt({
+                specsPath: opts.specsPath,
+                planPath: sessionPath,
+                sessionPath,
+                checkOutput
+              })
 
-                const implementingSystemPrompt = implementingPrompt({
-                  specsPath: opts.specsPath,
-                  planPath: sessionPath,
-                  sessionPath,
-                  checkOutput
-                })
+              const implEvents = agent.spawn({
+                prompt: `Please implement the tasks from the plan at ${sessionPath}`,
+                systemPrompt: implementingSystemPrompt,
+                cwd: opts.cwd,
+                dangerouslySkipPermissions: true
+              })
 
-                const implEvents = agent.spawn({
-                  prompt: `Please implement the tasks from the plan at ${sessionPath}`,
-                  systemPrompt: implementingSystemPrompt,
-                  cwd: opts.cwd,
-                  dangerouslySkipPermissions: true
-                })
+              const implMarkerStream = extractMarkers(implEvents, implementingMarkerConfig)
 
-                const implMarkerStream = extractMarkers(implEvents, implementingMarkerConfig)
+              const implTerminal = yield* runPhaseAndEmit(
+                implMarkerStream,
+                "implementing",
+                Schema.Union([SpecIssue, Done])
+              )
 
-                const implTerminal = yield* runPhaseAndEmit(
-                  implMarkerStream,
-                  "implementing",
-                  Schema.Union([SpecIssue, Progress, Done])
-                )
+              if (implTerminal._tag === "SpecIssue") {
+                const specContent = (implTerminal as SpecIssue).content
+                const filename = yield* storage.writeSpecIssue(specContent)
+                yield* Queue.offer(queue, new LoopSpecIssue({ iteration, content: specContent, filename }))
+                yield* Queue.end(queue)
+                return
+              }
 
-                // Auto-commit if enabled (after Progress or Done)
-                if (opts.commit && (implTerminal._tag === "Progress" || implTerminal._tag === "Done")) {
-                  const commitMessage = (implTerminal as Progress | Done).content
-                  const commitResult = yield* performAutoCommit(commitMessage, opts.cwd, iteration, opts.specsPath)
-                  if (commitResult !== null) {
-                    yield* Queue.offer(queue, commitResult)
-                    // Auto-push if enabled and commit succeeded
-                    if (commitResult._tag === "CommitPerformed" && opts.push && opts.push.trim() !== "") {
-                      const pushResult = yield* performAutoPush(opts.push, opts.cwd, iteration, commitResult.commitHash)
-                      yield* Queue.offer(queue, pushResult)
-                    }
+              // Auto-commit if enabled (after Done)
+              if (opts.commit && implTerminal._tag === "Done") {
+                const commitMessage = (implTerminal as Done).content
+                const commitResult = yield* performAutoCommit(commitMessage, opts.cwd, iteration, opts.specsPath)
+                if (commitResult !== null) {
+                  yield* Queue.offer(queue, commitResult)
+                  // Auto-push if enabled and commit succeeded
+                  if (commitResult._tag === "CommitPerformed" && opts.push && opts.push.trim() !== "") {
+                    const pushResult = yield* performAutoPush(opts.push, opts.cwd, iteration, commitResult.commitHash)
+                    yield* Queue.offer(queue, pushResult)
                   }
-                }
-
-                switch (implTerminal._tag) {
-                  case "SpecIssue": {
-                    const specContent = (implTerminal as SpecIssue).content
-                    const filename = yield* storage.writeSpecIssue(specContent)
-                    yield* Queue.offer(queue, new LoopSpecIssue({ iteration, content: specContent, filename }))
-                    yield* Queue.end(queue)
-                    return
-                  }
-                  case "Progress":
-                    continue
-                  case "Done":
-                    implementationDone = true
                 }
               }
 

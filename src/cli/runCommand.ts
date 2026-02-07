@@ -4,7 +4,7 @@ import { LoopService, LoopServiceLayer } from "../LoopService.js"
 import { StorageService } from "../StorageService.js"
 import { withCliOutput } from "../CliOutput.js"
 import { isLoopTerminalEvent, type LoopTerminalEvent } from "../LoopEvent.js"
-import { CliError } from "./command.js"
+import { CliError } from "./CliError.js"
 import { AgentLayerMap } from "../AgentLayerMap.js"
 
 export const runCommand = Command.make(

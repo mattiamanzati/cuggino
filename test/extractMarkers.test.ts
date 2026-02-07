@@ -8,7 +8,7 @@ import {
   type LlmAgentEvent
 } from "../src/LlmAgentEvent.js"
 import { extractMarkers } from "../src/extractMarkers.js"
-import { Note, SpecIssue, Progress, Done, Approved, RequestChanges, ToBeDiscussed, defaultMarkerConfig, isLlmMarkerEvent, isLlmTerminalMarkerEvent } from "../src/LlmMarkerEvent.js"
+import { Note, SpecIssue, Done, Approved, RequestChanges, ToBeDiscussed, defaultMarkerConfig, isLlmMarkerEvent, isLlmTerminalMarkerEvent } from "../src/LlmMarkerEvent.js"
 
 // Helper to collect stream into array
 const collectStream = <A, E>(stream: Stream.Stream<A, E, never>): Effect.Effect<Array<A>, E> =>
@@ -101,23 +101,6 @@ describe("extractMarkers", () => {
         expect(result[1].text).toBe("middle")
       }
       expect(result[2]).toEqual(new Note({ content: "Second note" }))
-    })
-  })
-
-  describe("PROGRESS marker", () => {
-    it("should extract PROGRESS marker from text", async () => {
-      const events: Array<LlmAgentEvent> = [
-        new AgentMessage({
-          text: "<PROGRESS>Completed task 1, moving to task 2</PROGRESS>"
-        })
-      ]
-
-      const stream = Stream.fromIterable(events)
-      const result = await Effect.runPromise(collectStream(extractMarkers(stream, defaultMarkerConfig)))
-
-      // Only marker, no AgentMessage
-      expect(result).toHaveLength(1)
-      expect(result[0]).toEqual(new Progress({ content: "Completed task 1, moving to task 2" }))
     })
   })
 

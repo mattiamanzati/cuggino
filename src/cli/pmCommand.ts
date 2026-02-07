@@ -4,7 +4,7 @@ import { StorageService } from "../StorageService.js"
 import { LlmAgent } from "../LlmAgent.js"
 import { pmCommandPrompt } from "../AgentPrompts.js"
 import { AgentLayerMap } from "../AgentLayerMap.js"
-import { CliError } from "./command.js"
+import { CliError } from "./CliError.js"
 
 export const pmCommand = Command.make(
   "pm",

@@ -29,17 +29,6 @@ export class SpecIssue extends Schema.Class<SpecIssue>("SpecIssue")({
 }
 
 /**
- * Progress marker - status updates during execution
- */
-export class Progress extends Schema.Class<Progress>("Progress")({
-  _tag: Schema.tag("Progress"),
-  content: Schema.String
-}) {
-  [LlmMarkerEventTypeId]: LlmMarkerEventTypeId = LlmMarkerEventTypeId;
-  [LlmTerminalMarkerEventTypeId]: LlmTerminalMarkerEventTypeId = LlmTerminalMarkerEventTypeId
-}
-
-/**
  * Done marker - task completion notification
  */
 export class Done extends Schema.Class<Done>("Done")({
@@ -99,7 +88,6 @@ export class ToBeDiscussed extends Schema.Class<ToBeDiscussed>("ToBeDiscussed")(
 export type LlmMarkerEvent =
   | Note
   | SpecIssue
-  | Progress
   | Done
   | Approved
   | RequestChanges
@@ -112,7 +100,6 @@ export type LlmMarkerEvent =
 export const LlmMarkerEventSchema = Schema.Union([
   Note,
   SpecIssue,
-  Progress,
   Done,
   Approved,
   RequestChanges,
@@ -123,7 +110,6 @@ export const LlmMarkerEventSchema = Schema.Union([
 export type LlmTerminalMarkerEvent =
   | SpecIssue
   | PlanComplete
-  | Progress
   | Done
   | Approved
   | RequestChanges
@@ -143,7 +129,6 @@ export const isLlmTerminalMarkerEvent = (event: unknown): event is LlmTerminalMa
 export const defaultMarkerConfig: MarkerExtractorConfig<{
   NOTE: Note
   SPEC_ISSUE: SpecIssue
-  PROGRESS: Progress
   DONE: Done
   APPROVED: Approved
   REQUEST_CHANGES: RequestChanges
@@ -152,7 +137,6 @@ export const defaultMarkerConfig: MarkerExtractorConfig<{
 }> = {
   NOTE: (content) => new Note({ content }),
   SPEC_ISSUE: (content) => new SpecIssue({ content }),
-  PROGRESS: (content) => new Progress({ content }),
   DONE: (content) => new Done({ content }),
   APPROVED: (content) => new Approved({ content }),
   REQUEST_CHANGES: (content) => new RequestChanges({ content }),

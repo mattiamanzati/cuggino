@@ -14,7 +14,6 @@ const DIM = "\x1b[2m"
 const RED = "\x1b[31m"
 const GREEN = "\x1b[32m"
 const YELLOW = "\x1b[33m"
-const BLUE = "\x1b[34m"
 const MAGENTA = "\x1b[35m"
 const CYAN = "\x1b[36m"
 const BOLD_MAGENTA = "\x1b[1;35m"
@@ -159,8 +158,6 @@ export const formatLlmMarkerEvent = (event: LlmMarkerEvent, verbose: boolean): s
       return `\n${BOLD}${YELLOW}[NOTE]${RESET} ${event.content}\n`
     case "SpecIssue":
       return `\n${BOLD}${RED}[SPEC_ISSUE]${RESET} ${event.content}\n`
-    case "Progress":
-      return `\n${BOLD}${BLUE}[PROGRESS]${RESET} ${event.content}\n`
     case "Done":
       return `\n${BOLD}${GREEN}[DONE]${RESET} ${event.content}\n`
     case "Approved":
