@@ -111,22 +111,22 @@ const hasCommand = (cmd: string | undefined): cmd is string =>
   cmd !== undefined && cmd.trim() !== ""
 
 /**
- * Run a check command and capture its output.
+ * Run a shell command and capture its output.
  * This function NEVER fails - it always returns output and exit code.
  */
-const runCheckCommand = (command: string, cwd: string): Effect.Effect<{ output: string; exitCode: number }, never, ChildProcessSpawner.ChildProcessSpawner> =>
+const runShellCommand = (command: string, cwd: string): Effect.Effect<{ output: string; exitCode: number }, never, ChildProcessSpawner.ChildProcessSpawner> =>
   Effect.gen(function*() {
     const cmd = ChildProcess.make({ cwd, shell: true })`${command}`
     const handle = yield* ChildProcess.spawn(cmd)
     const output = yield* Stream.mkString(Stream.decodeText(handle.all))
     const exitCode = yield* handle.exitCode
     if (output.trim()) return { output, exitCode }
-    if (exitCode !== 0) return { output: `Check command failed with exit code ${exitCode}.`, exitCode }
-    return { output: "Check command completed successfully with no output.", exitCode }
+    if (exitCode !== 0) return { output: `Command failed with exit code ${exitCode}.`, exitCode }
+    return { output: "Command completed successfully with no output.", exitCode }
   }).pipe(
     Effect.scoped,
     Effect.catch((cause) =>
-      Effect.succeed({ output: `Check command failed: ${cause}`, exitCode: -1 })
+      Effect.succeed({ output: `Command failed: ${cause}`, exitCode: -1 })
     )
   )
 
@@ -344,7 +344,7 @@ export const LoopServiceLayer = Layer.effect(
               // Setup command (after planning, before implementation)
               if (hasCommand(opts.setupCommand)) {
                 yield* Queue.offer(queue, new SetupCommandStarting({ iteration }))
-                const setupResult = yield* runCheckCommand(opts.setupCommand, opts.cwd)
+                const setupResult = yield* runShellCommand(opts.setupCommand, opts.cwd)
                 yield* Queue.offer(queue, new SetupCommandOutput({ iteration, output: setupResult.output, exitCode: setupResult.exitCode }))
                 if (setupResult.exitCode !== 0) {
                   return yield* new LoopError({
@@ -360,7 +360,7 @@ export const LoopServiceLayer = Layer.effect(
               let checkOutput: string | undefined
               if (hasCommand(opts.checkCommand)) {
                 yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
-                const checkResult = yield* runCheckCommand(opts.checkCommand, opts.cwd)
+                const checkResult = yield* runShellCommand(opts.checkCommand, opts.cwd)
                 checkOutput = checkResult.output
                 yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: checkResult.output, exitCode: checkResult.exitCode }))
               }
@@ -373,7 +373,7 @@ export const LoopServiceLayer = Layer.effect(
               })
 
               const implEvents = agent.spawn({
-                prompt: `Please implement the tasks from the plan at ${sessionPath}`,
+                prompt: `Please implement one task from the plan at ${sessionPath}`,
                 systemPrompt: implementingSystemPrompt,
                 cwd: opts.cwd,
                 dangerouslySkipPermissions: true
@@ -396,7 +396,7 @@ export const LoopServiceLayer = Layer.effect(
               }
 
               // Auto-commit if enabled (after Done)
-              if (opts.commit && implTerminal._tag === "Done") {
+              if (opts.commit) {
                 const commitMessage = (implTerminal as Done).content
                 const commitResult = yield* performAutoCommit(commitMessage, opts.cwd, iteration, opts.specsPath)
                 if (commitResult !== null) {
@@ -416,7 +416,7 @@ export const LoopServiceLayer = Layer.effect(
               let reviewCheckOutput: string | undefined
               if (hasCommand(opts.checkCommand)) {
                 yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
-                const reviewCheckResult = yield* runCheckCommand(opts.checkCommand, opts.cwd)
+                const reviewCheckResult = yield* runShellCommand(opts.checkCommand, opts.cwd)
                 reviewCheckOutput = reviewCheckResult.output
                 yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: reviewCheckResult.output, exitCode: reviewCheckResult.exitCode }))
               }
