@@ -238,6 +238,10 @@ export const formatLoopPhaseEvent = (event: LoopPhaseEvent, verbose: boolean): s
       return `\n${BOLD_MAGENTA}[Commit] ${event.commitHash}: ${event.message}${RESET}`
     case "CommitFailed":
       return `\n${BOLD_RED}[Commit] Failed: ${event.message}${RESET}`
+    case "PushPerformed":
+      return `\n${BOLD_MAGENTA}[Push] ${event.commitHash} → ${event.remote}${RESET}`
+    case "PushFailed":
+      return `\n${BOLD_RED}[Push] Failed: ${event.message}${RESET}`
   }
 }
 

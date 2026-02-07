@@ -32,6 +32,10 @@ export const setupCommand = Command.make(
           message: "Auto-commit after each implementation step",
           initial: existingConfig.commit
         }),
+        push: Prompt.text({
+          message: "Push to remote after each commit (e.g., origin/main) — leave empty to skip",
+          default: existingConfig.push ?? ""
+        }),
         audit: Prompt.toggle({
           message: "Run audit agent during idle time",
           initial: existingConfig.audit
@@ -44,11 +48,12 @@ export const setupCommand = Command.make(
           ]
         })
       }).pipe(Prompt.run)
-      const { setupCommand, checkCommand, ...rest } = result
+      const { setupCommand, checkCommand, push, ...rest } = result
       const config = {
         ...rest,
         ...(setupCommand.trim() !== "" ? { setupCommand: setupCommand.trim() } : {}),
-        ...(checkCommand.trim() !== "" ? { checkCommand: checkCommand.trim() } : {})
+        ...(checkCommand.trim() !== "" ? { checkCommand: checkCommand.trim() } : {}),
+        ...(push.trim() !== "" ? { push: push.trim() } : {})
       }
       yield* storage.writeConfig(config)
       yield* Effect.sync(() => {
@@ -58,6 +63,7 @@ export const setupCommand = Command.make(
         console.log(`  setupCommand:   ${config.setupCommand || "(none)"}`)
         console.log(`  checkCommand:   ${config.checkCommand || "(none)"}`)
         console.log(`  commit:         ${config.commit}`)
+        console.log(`  push:           ${config.push || "(none)"}`)
         console.log(`  audit:          ${config.audit}`)
         console.log(`  notify:         ${config.notify}`)
         console.log()

@@ -153,6 +153,29 @@ export class CommitFailed extends Schema.Class<CommitFailed>("CommitFailed")({
 }
 
 /**
+ * Push performed event - auto-push succeeded after auto-commit
+ */
+export class PushPerformed extends Schema.Class<PushPerformed>("PushPerformed")({
+  _tag: Schema.tag("PushPerformed"),
+  iteration: Schema.Number,
+  commitHash: Schema.String,
+  remote: Schema.String
+}) {
+  [LoopPhaseEventTypeId]: LoopPhaseEventTypeId = LoopPhaseEventTypeId
+}
+
+/**
+ * Push failed event - auto-push failed after auto-commit
+ */
+export class PushFailed extends Schema.Class<PushFailed>("PushFailed")({
+  _tag: Schema.tag("PushFailed"),
+  iteration: Schema.Number,
+  message: Schema.String
+}) {
+  [LoopPhaseEventTypeId]: LoopPhaseEventTypeId = LoopPhaseEventTypeId
+}
+
+/**
  * Union of all loop phase events
  */
 export type LoopPhaseEvent =
@@ -169,6 +192,8 @@ export type LoopPhaseEvent =
   | LoopMaxIterations
   | CommitPerformed
   | CommitFailed
+  | PushPerformed
+  | PushFailed
 
 export type LoopTerminalEvent =
   | LoopApproved

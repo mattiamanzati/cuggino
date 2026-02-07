@@ -31,6 +31,8 @@ import {
   LoopMaxIterations,
   CommitPerformed,
   CommitFailed,
+  PushPerformed,
+  PushFailed,
   type LoopEvent
 } from "./LoopEvent.js"
 
@@ -58,6 +60,7 @@ export interface LoopRunOptions {
   readonly setupCommand?: string
   readonly checkCommand?: string
   readonly commit?: boolean
+  readonly push?: string
 }
 
 /**
@@ -187,6 +190,32 @@ const performAutoCommit = (
       Effect.succeed(new CommitFailed({ iteration, message: `${cause}` }))
     )
   )
+
+/**
+ * Run git push to the specified remote/branch. Never fails the outer effect.
+ */
+const performAutoPush = (
+  pushRef: string,
+  cwd: string,
+  iteration: number,
+  commitHash: string
+): Effect.Effect<PushPerformed | PushFailed, never, ChildProcessSpawner.ChildProcessSpawner> => {
+  const slashIndex = pushRef.indexOf("/")
+  const remote = slashIndex >= 0 ? pushRef.slice(0, slashIndex) : pushRef
+  const branch = slashIndex >= 0 ? pushRef.slice(slashIndex + 1) : "main"
+
+  return Effect.scoped(
+    Effect.gen(function*() {
+      const cmd = ChildProcess.make("git", ["push", remote, `HEAD:${branch}`], { cwd })
+      yield* ChildProcess.string(cmd)
+      return new PushPerformed({ iteration, commitHash, remote: pushRef })
+    })
+  ).pipe(
+    Effect.catch((cause) =>
+      Effect.succeed(new PushFailed({ iteration, message: `${cause}` }))
+    )
+  )
+}
 
 /**
  * Create the LoopService layer
@@ -369,6 +398,11 @@ export const LoopServiceLayer = Layer.effect(
                   const commitResult = yield* performAutoCommit(commitMessage, opts.cwd, iteration, opts.specsPath)
                   if (commitResult !== null) {
                     yield* Queue.offer(queue, commitResult)
+                    // Auto-push if enabled and commit succeeded
+                    if (commitResult._tag === "CommitPerformed" && opts.push && opts.push.trim() !== "") {
+                      const pushResult = yield* performAutoPush(opts.push, opts.cwd, iteration, commitResult.commitHash)
+                      yield* Queue.offer(queue, pushResult)
+                    }
                   }
                 }
 

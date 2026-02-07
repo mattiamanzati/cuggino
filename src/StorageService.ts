@@ -19,6 +19,7 @@ export const CugginoConfig = Schema.Struct({
   setupCommand: Schema.optionalKey(Schema.String),
   checkCommand: Schema.optionalKey(Schema.String),
   commit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false)),
+  push: Schema.optionalKey(Schema.String),
   audit: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(() => false)),
   notify: Schema.Union([Schema.Literal("none"), Schema.Literal("osx-notification")]).pipe(Schema.withDecodingDefaultKey(() => "none" as const))
 })

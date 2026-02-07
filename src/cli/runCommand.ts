@@ -35,7 +35,8 @@ export const runCommand = Command.make(
         maxIterations: config.maxIterations,
         setupCommand: config.setupCommand,
         checkCommand: config.checkCommand,
-        commit: config.commit
+        commit: config.commit,
+        push: config.push
       })
 
       const terminalEvents: Array<LoopTerminalEvent> = []

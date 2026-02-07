@@ -29,6 +29,7 @@ export const watchCommand = Command.make(
         setupCommand: config.setupCommand,
         checkCommand: config.checkCommand,
         commit: config.commit,
+        push: config.push,
         audit: config.audit,
         notify: config.notify
       }).pipe(

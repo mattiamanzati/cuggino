@@ -33,6 +33,7 @@ export interface WatchRunOptions {
   readonly setupCommand?: string
   readonly checkCommand?: string
   readonly commit?: boolean
+  readonly push?: string
   readonly audit?: boolean
   readonly notify?: "none" | "osx-notification"
 }
@@ -261,7 +262,8 @@ export const WatchServiceLayer = Layer.effect(
                 maxIterations: opts.maxIterations,
                 setupCommand: opts.setupCommand,
                 checkCommand: opts.checkCommand,
-                commit: opts.commit
+                commit: opts.commit,
+                push: opts.push
               }).pipe(
                 Stream.runForEach((event) =>
                   Effect.gen(function*() {
