@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { getUpdates, sendMessage, type TelegramError } from "./TelegramService.js"
+import { getUpdates, sendMessage, sendChatAction, type TelegramError } from "./TelegramService.js"
 import type { LlmAgentShape } from "./LlmAgent.js"
 import type { StorageServiceShape } from "./StorageService.js"
 
@@ -46,6 +46,18 @@ export const splitMessage = (text: string, limit: number = 4096): Array<string> 
   }
 
   return chunks
+}
+
+export const makeTypingIndicator = (token: string, chatId: number) => {
+  let lastSent = 0
+  return {
+    send: Effect.gen(function*() {
+      const now = Date.now()
+      if (now - lastSent < 3000) return
+      yield* sendChatAction(token, chatId, "typing").pipe(Effect.ignore)
+      lastSent = now
+    })
+  }
 }
 
 export const authenticate = (token: string): Effect.Effect<{ chatId: number; offset: number }, TelegramError> =>
