@@ -54,6 +54,9 @@ export interface StorageServiceShape {
   /** Path to .cuggino/memory.md */
   readonly memoryPath: string
 
+  /** Remove all files from the wip/ directory (stale session cleanup) */
+  readonly cleanupWip: () => Effect.Effect<void, StorageError>
+
   /**
    * Write a spec issue to .cuggino/spec-issues/.
    * Generates a UUIDv7 filename, writes the content, and returns the filename.
@@ -98,6 +101,12 @@ export const StorageServiceLayer = (cwd: string) => Layer.effect(
     yield* fs.makeDirectory(backlogDir, { recursive: true })
     yield* fs.makeDirectory(tbdDir, { recursive: true })
 
+    // Clean up stale WIP files from previous sessions
+    const wipFiles = yield* fs.readDirectory(wipDir)
+    for (const file of wipFiles) {
+      yield* fs.remove(path.join(wipDir, file))
+    }
+
     return {
       cwd,
       rootDir,
@@ -106,6 +115,20 @@ export const StorageServiceLayer = (cwd: string) => Layer.effect(
       backlogDir,
       tbdDir,
       memoryPath,
+
+      cleanupWip: () =>
+        Effect.gen(function*() {
+          const files = yield* fs.readDirectory(wipDir)
+          for (const file of files) {
+            yield* fs.remove(path.join(wipDir, file))
+          }
+        }).pipe(
+          Effect.catch((cause) =>
+            cause instanceof StorageError
+              ? Effect.fail(cause)
+              : Effect.fail(new StorageError({ operation: "cleanupWip", cause }))
+          )
+        ),
 
       writeSpecIssue: (content: string) =>
         Effect.gen(function*() {
