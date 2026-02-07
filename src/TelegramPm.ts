@@ -1,4 +1,5 @@
-import { Effect } from "effect"
+import { Effect, Stream } from "effect"
+import * as Uuid from "uuid"
 import { getUpdates, sendMessage, sendChatAction, type TelegramError } from "./TelegramService.js"
 import type { LlmAgentShape } from "./LlmAgent.js"
 import type { StorageServiceShape } from "./StorageService.js"
@@ -78,5 +79,80 @@ export const authenticate = (token: string): Effect.Effect<{ chatId: number; off
     }
   })
 
-export const runTelegramPm = (_options: RunTelegramPmOptions): Effect.Effect<void> =>
-  Effect.void
+export const runTelegramPm = (options: RunTelegramPmOptions): Effect.Effect<void, TelegramError> =>
+  Effect.gen(function*() {
+    // 1. Authenticate
+    const { chatId, offset: initialOffset } = yield* authenticate(options.botToken)
+
+    // 2. Session setup
+    const sessionId = Uuid.v7()
+    const typing = makeTypingIndicator(options.botToken, chatId)
+    let isFirstMessage = true
+    let currentOffset = initialOffset
+
+    // 3. Main loop — sequential poll-and-process
+    while (true) {
+      // 3a. Poll
+      const pollResult = yield* getUpdates(options.botToken, currentOffset, 30).pipe(
+        Effect.catch(() => Effect.succeed(null))
+      )
+      if (pollResult === null) {
+        yield* Effect.sleep(1000)
+        continue
+      }
+
+      // 3b. Filter — collect text messages from authenticated chat
+      const messages: Array<string> = []
+      for (const update of pollResult) {
+        currentOffset = update.update_id + 1
+        if (update.message?.chat.id === chatId && update.message.text) {
+          messages.push(update.message.text)
+        }
+      }
+
+      // 3c. Process each message
+      for (const messageText of messages) {
+        const spawnOptions = {
+          cwd: options.storage.cwd,
+          prompt: messageText,
+          systemPrompt: options.systemPrompt,
+          dangerouslySkipPermissions: true,
+          sessionId,
+          resume: !isFirstMessage
+        }
+        isFirstMessage = false
+
+        let text = ""
+        const tools = new Set<string>()
+
+        yield* options.agent.spawn(spawnOptions).pipe(
+          Stream.tap(() => typing.send),
+          Stream.runForEach((event) =>
+            Effect.sync(() => {
+              if (event._tag === "AgentMessage") {
+                text += event.text
+              } else if (event._tag === "ToolCall") {
+                tools.add(event.name)
+              }
+            })
+          ),
+          Effect.catch(() =>
+            sendMessage(options.botToken, chatId, "Error: agent session failed").pipe(Effect.ignore)
+          )
+        )
+
+        let response = text
+        if (tools.size > 0) {
+          response += `\n\nTools used: ${Array.from(tools).join(", ")}`
+        }
+        if (response.trim() === "") {
+          response = "(No response)"
+        }
+
+        const chunks = splitMessage(response)
+        for (const chunk of chunks) {
+          yield* sendMessage(options.botToken, chatId, chunk)
+        }
+      }
+    }
+  })
