@@ -308,7 +308,7 @@ Run \`git diff ${opts.initialCommitHash}..HEAD\` to understand the scope of chan
 
   return `# Review Task
 
-Verify implementation matches the SPECIFICATIONS (not the plan).
+Verify that the plan's tasks were correctly implemented. Also check consistency with specs as a secondary concern.
 ${checkSection}${initialCommitSection}
 ## Files
 
@@ -321,10 +321,20 @@ ${checkSection}${initialCommitSection}
 
 ## Steps
 
-1. Read specs from ${opts.specsPath}
-2. Read session from ${opts.sessionPath}
+1. Read the plan and progress from ${opts.sessionPath}
+2. Read specs from ${opts.specsPath}
 3. Review the code changes (do not modify)
-4. Compare against SPECS (source of truth)
+4. Check that plan tasks were implemented correctly (primary concern)
+5. Check consistency with specs (secondary concern)
+6. Write a review file to ${opts.reviewPath}
+7. Emit a terminal marker
+
+## Review File
+
+ALWAYS write a review file to ${opts.reviewPath}, regardless of the outcome. The review should describe:
+- What was done correctly
+- What needs fixing (if anything)
+- What tasks from the plan remain
 
 ## Markers (emit exactly one)
 
@@ -335,19 +345,17 @@ Description of the issue...
 </SPEC_ISSUE>
 \`\`\`
 
-**APPROVED** - Implementation matches specs:
+**APPROVED** - All plan tasks are correctly implemented and consistent with specs:
 \`\`\`
 <APPROVED>
 Implementation verified.
 </APPROVED>
 \`\`\`
 
-**REQUEST_CHANGES** - Implementation doesn't match specs:
+**REQUEST_CHANGES** - Tasks were implemented incorrectly or tasks from the plan remain unimplemented:
 \`\`\`
 <REQUEST_CHANGES>
 What doesn't match and why...
 </REQUEST_CHANGES>
-\`\`\`
-
-When emitting REQUEST_CHANGES, also write detailed review to ${opts.reviewPath}.`
+\`\`\``
 }
