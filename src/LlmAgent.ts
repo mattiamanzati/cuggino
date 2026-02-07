@@ -13,6 +13,10 @@ export interface LlmAgentSpawnOptions {
   readonly systemPrompt?: string
   /** Skip permission checks (use with caution) */
   readonly dangerouslySkipPermissions?: boolean
+  /** Session ID for conversation continuity */
+  readonly sessionId?: string
+  /** Whether to resume an existing session (requires sessionId) */
+  readonly resume?: boolean
 }
 
 /**

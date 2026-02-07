@@ -182,6 +182,12 @@ const createSpawnStream = (
     args.push("--append-system-prompt", options.systemPrompt)
   }
 
+  if (options.resume && options.sessionId) {
+    args.push("--resume", options.sessionId)
+  } else if (options.sessionId) {
+    args.push("--session-id", options.sessionId)
+  }
+
   // Add the prompt as positional argument at the end
   args.push(options.prompt)
 
