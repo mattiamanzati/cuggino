@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.7
+
+### Patch Changes
+
+- [`32998ad`](https://github.com/mattiamanzati/cuggino/commit/32998ad9d0fb7c716638401d3f009fa41e928675) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - beta telegram
+
 ## 0.0.6
 
 ### Patch Changes

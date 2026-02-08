@@ -1,5 +1,0 @@
----
-"cuggino": patch
----
-
-beta telegram
