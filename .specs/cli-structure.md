@@ -16,7 +16,7 @@ Every command that requires an LLM provider has an `--agent` / `-a` flag to sele
 
 | Command | Purpose | Details |
 |---------|---------|---------|
-| `cuggino pm` | Interactive project manager session | See [pm-command.md](./pm-command.md) |
+| `cuggino pm` | Interactive project manager session (or Telegram bot with `--telegram`) | See [pm-command.md](./pm-command.md), [telegram-pm.md](./telegram-pm.md) |
 | `cuggino run` | Execute a single coding loop for a given focus | See [run-command.md](./run-command.md) |
 | `cuggino watch` | Continuously process backlog items | See [watch-command.md](./watch-command.md) |
 | `cuggino setup` | Interactively configure the project | See [setup-command.md](./setup-command.md) |

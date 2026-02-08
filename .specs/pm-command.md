@@ -10,7 +10,9 @@ Running `cuggino pm` starts an interactive session in **project manager (PM) mod
 cuggino pm
 ```
 
-Supports the `--agent` / `-a` flag to select the LLM provider. The `specsPath` configuration is read from `.cuggino.json`, and the PM also relies on the standard `.cuggino/` folder structure (`spec-issues/`, `backlog/`, `tbd/`) via `StorageService`. See [setup-command](./setup-command.md) and [storage](./storage.md) for details.
+Supports the `--agent` / `-a` flag to select the LLM provider and the `--telegram=BOT_TOKEN` flag to run as a Telegram bot instead of an interactive terminal session (see [telegram-pm.md](./telegram-pm.md)).
+
+The `specsPath` configuration is read from `.cuggino.json`, and the PM also relies on the standard `.cuggino/` folder structure (`spec-issues/`, `backlog/`, `tbd/`) via `StorageService`. See [setup-command](./setup-command.md) and [storage](./storage.md) for details.
 
 ## Behavior
 

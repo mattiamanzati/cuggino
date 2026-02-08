@@ -21,6 +21,7 @@ The system uses three types of agents in a loop:
 - **Purpose**: Investigate the codebase and specs, then create a detailed plan
 - **First run**: Receives the focus and creates the full plan from scratch
 - **Subsequent runs**: Receives the previous plan + the review file. Creates a revised plan that accounts for completed work, tasks that need fixing, and remaining tasks.
+- **Self-contained output**: The revised plan must be self-contained — it replaces the previous plan entirely. The plan must not reference or depend on the previous plan (e.g., "as in the previous plan..."), since the implementing agent only sees the current plan.
 - **Output**: A plan file containing tasks, implementation details, and testing requirements
 - **Can signal**: spec issue (exits loop) or plan complete (proceeds to implementation)
 
