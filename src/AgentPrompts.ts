@@ -13,6 +13,7 @@ export interface PmCommandPromptOptions {
 
 export interface PlanningPromptOptions {
   readonly specsPath: string
+  readonly cugginoPath: string
   readonly focus: string
   readonly planPath: string
   readonly codeReview?: string
@@ -21,6 +22,7 @@ export interface PlanningPromptOptions {
 
 export interface ImplementingPromptOptions {
   readonly specsPath: string
+  readonly cugginoPath: string
   readonly planPath: string
   readonly sessionPath: string
   readonly checkOutput?: string
@@ -28,6 +30,7 @@ export interface ImplementingPromptOptions {
 
 export interface ReviewingPromptOptions {
   readonly specsPath: string
+  readonly cugginoPath: string
   readonly sessionPath: string
   readonly reviewPath: string
   readonly checkOutput?: string
@@ -94,6 +97,19 @@ TBD ITEMS:
 - NEVER dismiss a TBD item about an implementation issue without asking the user. Even if the finding is about code (not specs), the user may want a backlog item created for it. Always present the finding and let the user decide: fix the spec, create a backlog item, or skip.
 - When the user chooses to DISMISS a TBD item (no spec change, no backlog item), record a brief summary of the dismissed finding in "${opts.memoryPath}" before deleting the TBD file. This prevents the audit agent from re-emitting the same finding in future runs.`
 
+const protectedPathsBlock = (specsPath: string, cugginoPath: string): string =>
+  `
+## Protected Paths
+
+The following paths are protected — do NOT modify, delete, or revert any files within them:
+- \`${specsPath}\`
+- \`${cugginoPath}\`
+
+This includes git operations (checkout, restore, reset, etc.) that would revert uncommitted changes in these paths.
+
+**Exception**: Only if the focus explicitly instructs you to modify files in these paths.
+`
+
 /**
  * System prompt for the planning agent.
  */
@@ -143,7 +159,7 @@ ${codeReviewSection}
 |------|------------|
 | ${opts.specsPath} | READ-ONLY |${previousPlanRow}
 | ${opts.planPath} | WRITE |
-
+${protectedPathsBlock(opts.specsPath, opts.cugginoPath)}
 ## Steps
 
 ${steps}
@@ -222,7 +238,7 @@ ${checkSection}
 | ${opts.planPath} | READ-ONLY |
 | ${opts.sessionPath} | READ-ONLY |
 | Source code | WRITE |
-
+${protectedPathsBlock(opts.specsPath, opts.cugginoPath)}
 ## Steps
 
 ${opts.checkOutput ? `0. Review the check output issues and fix them`: ``}
@@ -338,7 +354,7 @@ ${checkSection}${initialCommitSection}
 | ${opts.sessionPath} | READ-ONLY |
 | Source code | READ-ONLY |
 | ${opts.reviewPath} | WRITE |
-
+${protectedPathsBlock(opts.specsPath, opts.cugginoPath)}
 ## Steps
 
 1. Read the plan and progress from ${opts.sessionPath}

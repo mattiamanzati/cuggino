@@ -309,6 +309,7 @@ export const LoopServiceLayer = Layer.effect(
 
               const planningSystemPrompt = planningPrompt({
                 specsPath: opts.specsPath,
+                cugginoPath: ".cuggino",
                 focus: opts.focus,
                 planPath: tempPlanPath,
                 codeReview: Option.isSome(codeReview) ? codeReview.value : undefined,
@@ -367,6 +368,7 @@ export const LoopServiceLayer = Layer.effect(
 
               const implementingSystemPrompt = implementingPrompt({
                 specsPath: opts.specsPath,
+                cugginoPath: ".cuggino",
                 planPath: sessionPath,
                 sessionPath,
                 checkOutput
@@ -423,6 +425,7 @@ export const LoopServiceLayer = Layer.effect(
 
               const reviewingSystemPrompt = reviewingPrompt({
                 specsPath: opts.specsPath,
+                cugginoPath: ".cuggino",
                 sessionPath,
                 reviewPath,
                 checkOutput: reviewCheckOutput,
