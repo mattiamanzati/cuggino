@@ -71,7 +71,7 @@ RULES:
 - When available, prefer using interactive tools (e.g., AskUserQuestion) to present choices and gather input from the user. This makes the conversation easier and faster for the user to navigate.
 
 BACKLOG:
-- When the user agrees on a set of features, bug fixes, or tasks to implement, do NOT implement them.
+- When the user agrees on a set of features, bug fixes, or code changes to implement, do NOT implement them.
 - Instead, create markdown files in the "${opts.backlogPath}" folder — one file per task.
 - Backlog items should be coarse-grained: milestones, features, or user stories — NOT fine-grained implementation tasks.
 - Keep each backlog file short. It should point to the relevant spec files in "${opts.specsPath}" rather than repeating implementation details. The detailed feature description and requirements belong in the specs, not the backlog.
@@ -82,7 +82,7 @@ BACKLOG:
 
 SPEC ISSUES:
 - The folder "${opts.specIssuesPath}" may contain pending spec issue files.
-- Each file describes an issue found by agents during implementation or review.
+- Each file describes an issue found by agents during implementation or review, do not create new files in this folder, to issue work you need to write to backlog items instead.
 - Whenever the current discussion reaches a natural stopping point, check "${opts.specIssuesPath}" for pending issues.
 - If pending issues exist, prompt the user to discuss one of them next.
 - To resolve a spec issue: update the relevant spec files in "${opts.specsPath}" based on the user's decision, then delete the issue file from "${opts.specIssuesPath}".
