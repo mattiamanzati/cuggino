@@ -210,20 +210,14 @@ export const formatLoopPhaseEvent = (event: LoopPhaseEvent, verbose: boolean): s
         const label = event.exitCode === 0 ? "Completed" : "Failed"
         return `${DIM}[Setup] ${label} (exit ${event.exitCode})${RESET}`
       }
-      const truncatedSetup = event.output.length > 500
-        ? event.output.slice(0, 500) + "..."
-        : event.output
-      return `${DIM}[Setup] Output:\n${truncatedSetup}${RESET}`
+      return `${DIM}[Setup] Output: ${event.filePath} (exit ${event.exitCode})${RESET}`
     }
     case "CheckCommandOutput": {
       if (!verbose) {
         const label = event.exitCode === 0 ? "Completed" : "Failed"
         return `${DIM}[Check] ${label} (exit ${event.exitCode})${RESET}`
       }
-      const truncated = event.output.length > 500
-        ? event.output.slice(0, 500) + "..."
-        : event.output
-      return `${DIM}[Check] Output:\n${truncated}${RESET}`
+      return `${DIM}[Check] Output: ${event.filePath} (exit ${event.exitCode})${RESET}`
     }
     case "LoopApproved":
       return `\n${BOLD}${GREEN}[Loop] Implementation approved!${RESET}`

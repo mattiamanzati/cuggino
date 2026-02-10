@@ -362,7 +362,7 @@ export const LoopServiceLayer = Layer.effect(
               if (hasCommand(opts.setupCommand)) {
                 yield* Queue.offer(queue, new SetupCommandStarting({ iteration }))
                 const setupResult = yield* runShellCommand(opts.setupCommand, opts.cwd)
-                yield* Queue.offer(queue, new SetupCommandOutput({ iteration, output: setupResult.output, exitCode: setupResult.exitCode }))
+                yield* Queue.offer(queue, new SetupCommandOutput({ iteration, filePath: setupResult.output, exitCode: setupResult.exitCode }))
                 if (setupResult.exitCode !== 0) {
                   return yield* new LoopError({
                     phase: "planning",
@@ -379,7 +379,7 @@ export const LoopServiceLayer = Layer.effect(
                 yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
                 const checkResult = yield* runShellCommand(opts.checkCommand, opts.cwd)
                 checkOutput = checkResult.output
-                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: checkResult.output, exitCode: checkResult.exitCode }))
+                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, filePath: checkResult.output, exitCode: checkResult.exitCode }))
               }
 
               const implementingSystemPrompt = implementingPrompt({
@@ -436,7 +436,7 @@ export const LoopServiceLayer = Layer.effect(
                 yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
                 const reviewCheckResult = yield* runShellCommand(opts.checkCommand, opts.cwd)
                 reviewCheckOutput = reviewCheckResult.output
-                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, output: reviewCheckResult.output, exitCode: reviewCheckResult.exitCode }))
+                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, filePath: reviewCheckResult.output, exitCode: reviewCheckResult.exitCode }))
               }
 
               const reviewingSystemPrompt = reviewingPrompt({
