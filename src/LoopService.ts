@@ -1,4 +1,4 @@
-import { Effect, Layer, ServiceMap, Data, Stream, Option, Queue, Schema } from "effect"
+import { Effect, Layer, ServiceMap, Data, Stream, Option, Queue, Schema, FileSystem } from "effect"
 import * as Uuid from "uuid"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { LlmAgent } from "./LlmAgent.js"
@@ -128,6 +128,22 @@ const runShellCommand = (command: string, cwd: string): Effect.Effect<{ output: 
     Effect.catch((cause) =>
       Effect.succeed({ output: `Command failed: ${cause}`, exitCode: -1 })
     )
+  )
+
+/**
+ * Run a shell command and stream its output directly to a file.
+ * This function NEVER fails - it always returns an exit code (-1 on error).
+ */
+const runShellCommandToFile = (command: string, cwd: string, filePath: string): Effect.Effect<number, never, ChildProcessSpawner.ChildProcessSpawner | FileSystem.FileSystem> =>
+  Effect.gen(function*() {
+    const fs = yield* FileSystem.FileSystem
+    const cmd = ChildProcess.make({ cwd, shell: true })`${command}`
+    const handle = yield* ChildProcess.spawn(cmd)
+    yield* Stream.run(handle.all, fs.sink(filePath))
+    return yield* handle.exitCode
+  }).pipe(
+    Effect.scoped,
+    Effect.catch(() => Effect.succeed(-1))
   )
 
 /**
