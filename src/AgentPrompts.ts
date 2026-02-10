@@ -26,7 +26,8 @@ export interface ImplementingPromptOptions {
   readonly cugginoPath: string
   readonly planPath: string
   readonly sessionPath: string
-  readonly checkOutput?: string
+  readonly checkOutputPath?: string
+  readonly checkExitCode?: number
 }
 
 export interface ReviewingPromptOptions {
@@ -34,7 +35,8 @@ export interface ReviewingPromptOptions {
   readonly cugginoPath: string
   readonly sessionPath: string
   readonly reviewPath: string
-  readonly checkOutput?: string
+  readonly checkOutputPath?: string
+  readonly checkExitCode?: number
   readonly initialCommitHash?: string
 }
 
@@ -255,17 +257,17 @@ Plan written successfully.
  * System prompt for the implementing agent.
  */
 export const implementingPrompt = (opts: ImplementingPromptOptions): string => {
-  const checkSection = opts.checkOutput
+  const checkSection = opts.checkOutputPath
     ? `
 ## Check Output
 
-The following is the output from running the check command. Use this to understand what needs fixing:
-
-\`\`\`
-${opts.checkOutput}
-\`\`\`
+Check command exited with code \`${opts.checkExitCode}\`. The full output is available at \`${opts.checkOutputPath}\` — read the file for details.
 `
     : ""
+
+  const checkFileEntry: Array<FileEntry> = opts.checkOutputPath
+    ? [{ path: opts.checkOutputPath, permission: "READ_ONLY" }]
+    : []
 
   return `# Implementation Task
 
@@ -276,11 +278,12 @@ ${filesSection([
   { path: `Everything else in ${opts.cugginoPath}`, permission: "IGNORE" },
   { path: opts.planPath, permission: "READ_ONLY" },
   { path: opts.sessionPath, permission: "READ_ONLY" },
+  ...checkFileEntry,
   { path: "Source code", permission: "WRITE" },
 ])}
 ## Steps
 
-${opts.checkOutput ? `0. Review the check output issues and fix them`: ``}
+${opts.checkOutputPath ? `0. Read the check output file at \`${opts.checkOutputPath}\` and fix any issues (exit code: \`${opts.checkExitCode}\`)` : ``}
 1. Read plan from ${opts.planPath}
 2. Check ${opts.sessionPath} for previous progress
 3. Pick one and only one task to implement
@@ -370,17 +373,17 @@ export const auditPrompt = (opts: AuditPromptOptions): string => `Audit the code
  * System prompt for the reviewing agent.
  */
 export const reviewingPrompt = (opts: ReviewingPromptOptions): string => {
-  const checkSection = opts.checkOutput
+  const checkSection = opts.checkOutputPath
     ? `
 ## Check Output
 
-The following is the output from running the check command. Consider this when reviewing, requesting to fix potentially related issues or that prevent correct validation of the implementation:
-
-\`\`\`
-${opts.checkOutput}
-\`\`\`
+Check command exited with code \`${opts.checkExitCode}\`. The full output is available at \`${opts.checkOutputPath}\` — read the file for details. Consider this when reviewing, requesting to fix potentially related issues or that prevent correct validation of the implementation.
 `
     : ""
+
+  const checkFileEntry: Array<FileEntry> = opts.checkOutputPath
+    ? [{ path: opts.checkOutputPath, permission: "READ_ONLY" }]
+    : []
 
   const initialCommitSection = opts.initialCommitHash
     ? `
@@ -398,6 +401,7 @@ ${filesSection([
   { path: opts.specsPath, permission: "READ_ONLY" },
   { path: `Everything else in ${opts.cugginoPath}`, permission: "IGNORE" },
   { path: opts.sessionPath, permission: "READ_ONLY" },
+  ...checkFileEntry,
   { path: "Source code", permission: "READ_ONLY" },
   { path: opts.reviewPath, permission: "WRITE" },
 ])}
