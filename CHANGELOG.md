@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.10
+
+### Patch Changes
+
+- [`3ad4c34`](https://github.com/mattiamanzati/cuggino/commit/3ad4c340ae3d74c229f5b88f97bb85f5211c9d72) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - adjust prompt
+
 ## 0.0.9
 
 ### Patch Changes
