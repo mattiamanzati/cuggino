@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.9
+
+### Patch Changes
+
+- [`e06c57d`](https://github.com/mattiamanzati/cuggino/commit/e06c57d7ffec21ff700cbe9b1baf025cc131ddee) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - adjust prompts permissions
+
 ## 0.0.8
 
 ### Patch Changes
