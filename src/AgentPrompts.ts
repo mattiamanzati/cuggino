@@ -212,6 +212,9 @@ ${selfContainedNote}
 ### Description
 Targeted outcome of this task, what should be implemented or fixed, what is currently missing or incorrect that needs to be addressed.
 
+### Related
+- Related spec files or sources or useful resources to reference for context
+
 ### Subtasks
 - [ ] Subtask 1.1
 - [ ] Subtask 1.2
@@ -371,7 +374,7 @@ export const reviewingPrompt = (opts: ReviewingPromptOptions): string => {
     ? `
 ## Check Output
 
-The following is the output from running the check command. Consider this when reviewing:
+The following is the output from running the check command. Consider this when reviewing, requesting to fix potentially related issues or that prevent correct validation of the implementation:
 
 \`\`\`
 ${opts.checkOutput}
@@ -383,7 +386,7 @@ ${opts.checkOutput}
     ? `
 ## Changes Since Baseline
 
-Run \`git diff ${opts.initialCommitHash}..HEAD\` to understand the scope of changes introduced in this session. Focus your review on these changes and uncommitted additions/removals/modifications.
+Run \`git diff ${opts.initialCommitHash}..HEAD\` to understand the scope of changes introduced in this session. Focus first your review on these changes and uncommitted additions/removals/modifications, and then to related code.
 `
     : ""
 
