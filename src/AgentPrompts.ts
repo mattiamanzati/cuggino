@@ -42,6 +42,7 @@ export interface AuditPromptOptions {
   readonly specsPath: string
   readonly tbdPath: string
   readonly memoryPath: string
+  readonly cugginoPath: string
 }
 
 type FilePermission = "READ_ONLY" | "TASK_WRITABLE" | "WRITE" | "READ_DELETE" | "IGNORE"
@@ -323,11 +324,19 @@ Quick summary of what was implemented (git commit message style, do not referenc
 /**
  * System prompt for the audit agent.
  */
-export const auditSystemPrompt = (opts: AuditPromptOptions): string => `You are an audit agent. Your role is to scan the codebase and specs, looking for discrepancies, unclear specifications, and improvement opportunities.
+export const auditSystemPrompt = (opts: AuditPromptOptions): string => {
+  const auditFiles: Array<FileEntry> = [
+    { path: opts.specsPath, permission: "READ_ONLY" },
+    { path: opts.tbdPath, permission: "READ_ONLY" },
+    { path: opts.memoryPath, permission: "READ_ONLY" },
+    { path: "Source code", permission: "READ_ONLY" },
+    { path: `Everything else in ${opts.cugginoPath}`, permission: "IGNORE" },
+  ]
 
+  return `You are an audit agent. Your role is to scan the codebase and specs, looking for discrepancies, unclear specifications, and improvement opportunities.
+
+${filesSection(auditFiles)}
 RULES:
-- You are READ-ONLY. Do NOT create, edit, or modify any files.
-- Do NOT make any code changes.
 - Be thorough but not noisy — only raise genuinely useful findings.
 - Focus on things that require human decision-making, not trivial issues.
 - Emit each <TO_BE_DISCUSSED> as soon as it is found — do not batch findings or wait until the end.
@@ -354,6 +363,7 @@ and what decision needs to be made...
 </TO_BE_DISCUSSED>
 
 Each <TO_BE_DISCUSSED> should be self-contained and actionable. You may emit zero or multiple findings.`
+}
 
 /**
  * Prompt for the audit agent.
