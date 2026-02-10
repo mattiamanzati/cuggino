@@ -375,12 +375,13 @@ export const LoopServiceLayer = Layer.effect(
               // Implementation phase
               yield* Queue.offer(queue, new ImplementingStart({ iteration }))
 
-              let checkOutput: string | undefined
+              let checkOutputPath: string | undefined
+              let checkExitCode: number | undefined
               if (hasCommand(opts.checkCommand)) {
                 yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
-                const checkResult = yield* runShellCommand(opts.checkCommand, opts.cwd)
-                checkOutput = checkResult.output
-                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, filePath: checkResult.output, exitCode: checkResult.exitCode }))
+                checkOutputPath = yield* session.getCheckOutputPath()
+                checkExitCode = yield* runShellCommandToFile(opts.checkCommand, opts.cwd, checkOutputPath)
+                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, filePath: checkOutputPath, exitCode: checkExitCode }))
               }
 
               const implementingSystemPrompt = implementingPrompt({
@@ -388,7 +389,8 @@ export const LoopServiceLayer = Layer.effect(
                 cugginoPath: storage.rootDir,
                 planPath: sessionPath,
                 sessionPath,
-                checkOutput
+                checkOutputPath,
+                checkExitCode
               })
 
               const implEvents = agent.spawn({
@@ -432,12 +434,13 @@ export const LoopServiceLayer = Layer.effect(
               yield* session.clearReview()
               yield* Queue.offer(queue, new ReviewingStart({ iteration }))
 
-              let reviewCheckOutput: string | undefined
+              let reviewCheckOutputPath: string | undefined
+              let reviewCheckExitCode: number | undefined
               if (hasCommand(opts.checkCommand)) {
                 yield* Queue.offer(queue, new CheckCommandStarting({ iteration }))
-                const reviewCheckResult = yield* runShellCommand(opts.checkCommand, opts.cwd)
-                reviewCheckOutput = reviewCheckResult.output
-                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, filePath: reviewCheckResult.output, exitCode: reviewCheckResult.exitCode }))
+                reviewCheckOutputPath = yield* session.getCheckOutputPath()
+                reviewCheckExitCode = yield* runShellCommandToFile(opts.checkCommand, opts.cwd, reviewCheckOutputPath)
+                yield* Queue.offer(queue, new CheckCommandOutput({ iteration, filePath: reviewCheckOutputPath, exitCode: reviewCheckExitCode }))
               }
 
               const reviewingSystemPrompt = reviewingPrompt({
@@ -445,7 +448,8 @@ export const LoopServiceLayer = Layer.effect(
                 cugginoPath: storage.rootDir,
                 sessionPath,
                 reviewPath,
-                checkOutput: reviewCheckOutput,
+                checkOutputPath: reviewCheckOutputPath,
+                checkExitCode: reviewCheckExitCode,
                 initialCommitHash: initialCommitHash ?? undefined
               })
 
