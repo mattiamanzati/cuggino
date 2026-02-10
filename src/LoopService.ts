@@ -119,7 +119,7 @@ const runShellCommandToFile = (command: string, cwd: string, filePath: string): 
     const fs = yield* FileSystem.FileSystem
     const cmd = ChildProcess.make({ cwd, shell: true })`${command}`
     const handle = yield* ChildProcess.spawn(cmd)
-    yield* Stream.run(handle.all, fs.sink(filePath))
+    yield* Stream.run(handle.all, fs.sink(filePath, { flag: "w+"}))
     return yield* handle.exitCode
   }).pipe(
     Effect.scoped,
