@@ -29,7 +29,7 @@ The audit agent:
 5. Checks existing TBD files to **avoid duplicating** findings that have already been raised
 6. Reads `.cuggino/memory.md` (read-only) to **avoid re-emitting** findings that the user has previously dismissed
 
-The agent is read-only — it does not make any code changes. It runs with `dangerouslySkipPermissions: true` for uninterrupted navigation. It receives the path to `.cuggino/memory.md` so it can check for previously dismissed findings.
+The agent is read-only — it does not make any code changes. It runs with `dangerouslySkipPermissions: true` for uninterrupted navigation. It can read specs, source code, TBD files, and the memory file, but must ignore everything else inside `.cuggino/`. See [agent-permissions.md](./agent-permissions.md) for the full permission table.
 
 ## Findings
 

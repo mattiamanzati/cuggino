@@ -20,9 +20,10 @@ The root command handler spawns an interactive Claude agent with a system prompt
 
 ### What the Agent Can Do
 
-- Read existing spec files to understand the current state
+- Read existing spec files and source code to understand the current state
 - Discuss features, trade-offs, and design decisions with the user
-- Write and edit files **only** inside the specs folder, the spec issues folder, the backlog folder, the TBD folder, and the memory file (`.cuggino/memory.md`)
+- Write and edit files inside the specs folder, the backlog folder, and the memory file
+- Read and delete files in the spec issues folder and the TBD folder (but not create new ones)
 - Review and critique existing specifications
 - Propose new specifications
 - Propose features, bug fixes, or tasks — and upon user confirmation, create backlog items (not implement them)
@@ -33,15 +34,18 @@ The root command handler spawns an interactive Claude agent with a system prompt
 
 ### What the Agent Must NOT Do
 
-- Write or modify any file outside the specs folder, spec issues folder, backlog folder, TBD folder, and memory file
+- Write or modify source code, configuration files, or scripts
 - Run code, tests, or build commands
 - Implement features or write code — it must create backlog items instead
+- Access any files inside `.cuggino/` beyond the specific subpaths listed above
+
+For the full permission table, see [agent-permissions.md](./agent-permissions.md).
 
 ## System Prompt
 
 The system prompt instructs the agent to act as a PM with the following constraints:
 
-- May only write or edit files inside the specs, spec-issues, backlog, and TBD folders, and the memory file (`.cuggino/memory.md`)
+- File permissions as defined in the [agent permissions spec](./agent-permissions.md)
 - Must not write source code, configuration files, or scripts
 - Must be critical and thorough when reviewing specifications
 - Must ask clarifying questions when requirements are ambiguous
@@ -76,4 +80,4 @@ The system prompt instructs the agent to act as a PM with the following constrai
 
 The PM session uses the agent's interactive mode — stdio is inherited so the user talks directly to the agent. The session runs with `dangerouslySkipPermissions: true` and exits with the agent's exit code.
 
-**Note:** File restrictions (specs, backlog, spec-issues, tbd, memory file only) are enforced via the system prompt, not technically. With `dangerouslySkipPermissions` enabled, the agent could write anywhere if it disregards its instructions. This is an accepted trust model for a developer tool.
+**Note:** File restrictions are enforced via the system prompt, not technically. With `dangerouslySkipPermissions` enabled, the agent could write anywhere if it disregards its instructions. This is an accepted trust model for a developer tool (see [agent-permissions.md](./agent-permissions.md)).

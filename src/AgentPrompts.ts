@@ -97,18 +97,41 @@ TBD ITEMS:
 - NEVER dismiss a TBD item about an implementation issue without asking the user. Even if the finding is about code (not specs), the user may want a backlog item created for it. Always present the finding and let the user decide: fix the spec, create a backlog item, or skip.
 - When the user chooses to DISMISS a TBD item (no spec change, no backlog item), record a brief summary of the dismissed finding in "${opts.memoryPath}" before deleting the TBD file. This prevents the audit agent from re-emitting the same finding in future runs.`
 
-const protectedPathsBlock = (specsPath: string, cugginoPath: string): string =>
-  `
-## Protected Paths
+type FilePermission = "READ_ONLY" | "TASK_WRITABLE" | "WRITE"
 
-The following paths are protected — do NOT modify, delete, or revert any files within them:
-- \`${specsPath}\`
-- \`${cugginoPath}\`
+interface FileEntry {
+  readonly path: string
+  readonly permission: FilePermission
+}
 
-This includes git operations (checkout, restore, reset, etc.) that would revert uncommitted changes in these paths.
+const filePermissionLabel = (permission: FilePermission): string => {
+  switch (permission) {
+    case "READ_ONLY":
+      return "READ-ONLY"
+    case "TASK_WRITABLE":
+      return "AVOID CHANGES *"
+    case "WRITE":
+      return "WRITE"
+  }
+}
 
-**Exception**: Only if the focus explicitly instructs you to modify files in these paths.
+const filesSection = (files: ReadonlyArray<FileEntry>): string => {
+  const rows = files
+    .map((f) => `| ${f.path} | ${filePermissionLabel(f.permission)} |`)
+    .join("\n")
+  const hasTaskWritable = files.some((f) => f.permission === "TASK_WRITABLE")
+  const note = hasTaskWritable
+    ? `
+> **\\*** **AVOID CHANGES**: Do NOT modify, delete, or revert files in these paths — including via git operations (checkout, restore, reset). Exception: if the current focus or plan explicitly requires changes to these files, you CAN make those changes.
 `
+    : ""
+  return `## Files
+
+| Path | Permission |
+|------|------------|
+${rows}
+${note}`
+}
 
 /**
  * System prompt for the planning agent.
@@ -124,9 +147,14 @@ ${opts.codeReview}
 `
     : ""
 
-  const previousPlanRow = opts.previousPlanPath
-    ? `\n| ${opts.previousPlanPath} | READ-ONLY |`
-    : ""
+  const planningFiles: Array<FileEntry> = [
+    { path: opts.specsPath, permission: "TASK_WRITABLE" },
+    ...(opts.previousPlanPath
+      ? [{ path: opts.previousPlanPath, permission: "READ_ONLY" as const }]
+      : []),
+    { path: opts.planPath, permission: "WRITE" },
+    { path: opts.cugginoPath, permission: "TASK_WRITABLE" },
+  ]
 
   const steps = opts.previousPlanPath
     ? `1. Read the previous plan from ${opts.previousPlanPath} and the review feedback above
@@ -153,13 +181,7 @@ ${opts.focus}
 DO NOT PLAN FEATURES NOT INCLUDED IN THE FOCUS!
 
 ${codeReviewSection}
-## Files
-
-| Path | Permission |
-|------|------------|
-| ${opts.specsPath} | READ-ONLY |${previousPlanRow}
-| ${opts.planPath} | WRITE |
-${protectedPathsBlock(opts.specsPath, opts.cugginoPath)}
+${filesSection(planningFiles)}
 ## Steps
 
 ${steps}
@@ -171,12 +193,12 @@ ${selfContainedNote}
 
 ## Task 1: [Task Title]
 
+### Description
+Targeted outcome of this task, what should be implemented or fixed, what is currently missing or incorrect that needs to be addressed.
+
 ### Subtasks
 - [ ] Subtask 1.1
 - [ ] Subtask 1.2
-
-### Implementation Details
-How to implement this task...
 
 ### Verification
 - [ ] How to verify this task is complete
@@ -188,8 +210,8 @@ How to implement this task...
 
 Each task should have:
 - Clear subtasks to implement
-- Implementation details
-- Verification steps to confirm completion
+- Description of the task
+- Verification steps to confirm completion and acceptance criteria
 
 ## Markers (emit exactly one before exiting)
 
@@ -230,15 +252,13 @@ ${opts.checkOutput}
 
 Implement tasks from the plan.
 ${checkSection}
-## Files
-
-| Path | Permission |
-|------|------------|
-| ${opts.specsPath} | READ-ONLY |
-| ${opts.planPath} | READ-ONLY |
-| ${opts.sessionPath} | READ-ONLY |
-| Source code | WRITE |
-${protectedPathsBlock(opts.specsPath, opts.cugginoPath)}
+${filesSection([
+  { path: opts.specsPath, permission: "TASK_WRITABLE" },
+  { path: opts.cugginoPath, permission: "TASK_WRITABLE" },
+  { path: opts.planPath, permission: "READ_ONLY" },
+  { path: opts.sessionPath, permission: "READ_ONLY" },
+  { path: "Source code", permission: "WRITE" },
+])}
 ## Steps
 
 ${opts.checkOutput ? `0. Review the check output issues and fix them`: ``}
@@ -346,15 +366,13 @@ Run \`git diff ${opts.initialCommitHash}..HEAD\` to understand the scope of chan
 
 Verify that the plan's tasks were correctly implemented. Also check consistency with specs as a secondary concern.
 ${checkSection}${initialCommitSection}
-## Files
-
-| Path | Permission |
-|------|------------|
-| ${opts.specsPath} | READ-ONLY |
-| ${opts.sessionPath} | READ-ONLY |
-| Source code | READ-ONLY |
-| ${opts.reviewPath} | WRITE |
-${protectedPathsBlock(opts.specsPath, opts.cugginoPath)}
+${filesSection([
+  { path: opts.specsPath, permission: "READ_ONLY" },
+  { path: opts.cugginoPath, permission: "READ_ONLY" },
+  { path: opts.sessionPath, permission: "READ_ONLY" },
+  { path: "Source code", permission: "READ_ONLY" },
+  { path: opts.reviewPath, permission: "WRITE" },
+])}
 ## Steps
 
 1. Read the plan and progress from ${opts.sessionPath}

@@ -17,7 +17,7 @@ The user provides a **focus** (a specific feature or issue from the specs) via C
 The system uses three types of agents in a loop:
 
 ### 1. Planning Agent
-- **Input**: Current codebase + specs + user-provided focus + (optional) previous plan and review file from the last iteration
+- **Input**: Current codebase + specs + user-provided focus + (optional) previous plan and review file path from the last iteration
 - **Purpose**: Investigate the codebase and specs, then create a detailed plan
 - **First run**: Receives the focus and creates the full plan from scratch
 - **Subsequent runs**: Receives the previous plan + the review file. Creates a revised plan that accounts for completed work, tasks that need fixing, and remaining tasks.
@@ -48,21 +48,9 @@ The system uses three types of agents in a loop:
   - **Request changes** — either tasks were implemented incorrectly, or tasks from the plan remain unimplemented. The review file describes the details. Loop goes back to planning.
   - **Spec issue** — specs are unclear/inconsistent, loop exits
 
-## Protected Paths
+## Agent Permissions
 
-The loop agents (planning, implementing, reviewing) operate alongside files managed by the user and the PM agent. Certain paths are **protected** — the loop agents must not revert, overwrite, delete, or otherwise modify files within them, including via git operations (e.g., `git checkout`, `git restore`).
-
-Protected paths:
-- **`specsPath`** — the specifications folder (e.g., `.specs/`)
-- **`.cuggino/`** — the management folder (backlog, spec-issues, tbd, memory)
-
-Each loop agent prompt receives both `specsPath` (already present) and a `cugginoPath` parameter identifying these protected paths. The prompt instructs the agent:
-
-1. Do NOT modify, delete, or revert any files within the protected paths
-2. Do NOT use git operations (checkout, restore, reset, etc.) that would revert uncommitted changes in these paths
-3. **Exception**: Only if the focus explicitly instructs the agent to modify files in these paths
-
-This ensures that spec changes, backlog items, and other management files created by the user or PM agent between iterations are preserved throughout the loop.
+Each agent has explicit file access permissions defining what it can read, write, or must ignore. See [agent-permissions.md](./agent-permissions.md) for the full permission table and permission level definitions.
 
 ## Markers
 
