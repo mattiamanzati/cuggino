@@ -30,7 +30,8 @@ export const pmCommand = Command.make(
         specIssuesPath: storage.specIssuesDir,
         backlogPath: storage.backlogDir,
         tbdPath: storage.tbdDir,
-        memoryPath: storage.memoryPath
+        memoryPath: storage.memoryPath,
+        cugginoPath: storage.rootDir
       })
 
       if (Option.isSome(args.telegram)) {
