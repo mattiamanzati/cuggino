@@ -1,4 +1,4 @@
-import { Effect, Layer, Option, ServiceMap, Data, FileSystem, Path, LayerMap, Stream } from "effect"
+import { Effect, Layer, Option, ServiceMap, Data, FileSystem, Path, LayerMap } from "effect"
 import type { LlmMarkerEvent } from "./LlmMarkerEvent.js"
 import { StorageService } from "./StorageService.js"
 
@@ -57,9 +57,6 @@ export interface SessionServiceShape {
 
   /** Get the setup output file path */
   readonly getSetupOutputPath: () => Effect.Effect<string, SessionError>
-
-  /** Write a command output stream directly to a file, returning the exit code */
-  readonly writeCommandOutput: (path: string, stream: Stream.Stream<Uint8Array>) => Effect.Effect<void, SessionError>
 
   /** Read from temp plan file and move content to session file, then delete temp */
   readonly commitTempPlan: () => Effect.Effect<void, SessionError>
@@ -184,15 +181,6 @@ export class SessionServiceMap extends LayerMap.Service<SessionServiceMap>()("Se
         getTempPlanPath: () => Effect.succeed(tempPlanPath),
         getCheckOutputPath: () => Effect.succeed(checkOutputPath),
         getSetupOutputPath: () => Effect.succeed(setupOutputPath),
-
-        writeCommandOutput: (filePath: string, stream: Stream.Stream<Uint8Array>) =>
-          Stream.run(stream, fs.sink(filePath)).pipe(
-            Effect.catch((cause) =>
-              cause instanceof SessionError
-                ? Effect.fail(cause)
-                : Effect.fail(new SessionError({ operation: "writeCommandOutput", sessionId, cause }))
-            )
-          ),
 
         commitTempPlan: () =>
           Effect.gen(function*() {
