@@ -111,26 +111,6 @@ const hasCommand = (cmd: string | undefined): cmd is string =>
   cmd !== undefined && cmd.trim() !== ""
 
 /**
- * Run a shell command and capture its output.
- * This function NEVER fails - it always returns output and exit code.
- */
-const runShellCommand = (command: string, cwd: string): Effect.Effect<{ output: string; exitCode: number }, never, ChildProcessSpawner.ChildProcessSpawner> =>
-  Effect.gen(function*() {
-    const cmd = ChildProcess.make({ cwd, shell: true })`${command}`
-    const handle = yield* ChildProcess.spawn(cmd)
-    const output = yield* Stream.mkString(Stream.decodeText(handle.all))
-    const exitCode = yield* handle.exitCode
-    if (output.trim()) return { output, exitCode }
-    if (exitCode !== 0) return { output: `Command failed with exit code ${exitCode}.`, exitCode }
-    return { output: "Command completed successfully with no output.", exitCode }
-  }).pipe(
-    Effect.scoped,
-    Effect.catch((cause) =>
-      Effect.succeed({ output: `Command failed: ${cause}`, exitCode: -1 })
-    )
-  )
-
-/**
  * Run a shell command and stream its output directly to a file.
  * This function NEVER fails - it always returns an exit code (-1 on error).
  */
