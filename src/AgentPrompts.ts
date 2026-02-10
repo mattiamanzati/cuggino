@@ -176,7 +176,8 @@ ${opts.codeReview}
       ? [{ path: opts.previousPlanPath, permission: "READ_ONLY" as const }]
       : []),
     { path: opts.planPath, permission: "WRITE" },
-    { path: opts.cugginoPath, permission: "TASK_WRITABLE" },
+    { path: "Source code", permission: "READ_ONLY" },
+    { path: `Everything else in ${opts.cugginoPath}`, permission: "IGNORE" },
   ]
 
   const steps = opts.previousPlanPath
@@ -277,7 +278,7 @@ Implement tasks from the plan.
 ${checkSection}
 ${filesSection([
   { path: opts.specsPath, permission: "TASK_WRITABLE" },
-  { path: opts.cugginoPath, permission: "TASK_WRITABLE" },
+  { path: `Everything else in ${opts.cugginoPath}`, permission: "IGNORE" },
   { path: opts.planPath, permission: "READ_ONLY" },
   { path: opts.sessionPath, permission: "READ_ONLY" },
   { path: "Source code", permission: "WRITE" },
@@ -400,7 +401,7 @@ Verify that the plan's tasks were correctly implemented. Also check consistency 
 ${checkSection}${initialCommitSection}
 ${filesSection([
   { path: opts.specsPath, permission: "READ_ONLY" },
-  { path: opts.cugginoPath, permission: "READ_ONLY" },
+  { path: `Everything else in ${opts.cugginoPath}`, permission: "IGNORE" },
   { path: opts.sessionPath, permission: "READ_ONLY" },
   { path: "Source code", permission: "READ_ONLY" },
   { path: opts.reviewPath, permission: "WRITE" },
