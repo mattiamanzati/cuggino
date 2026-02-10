@@ -297,8 +297,8 @@ export const LoopServiceLayer = Layer.effect(
               ).pipe(Effect.catch(() => Effect.succeed(null)))
             }
 
-            // State for code review
-            let codeReview: Option.Option<string> = Option.none()
+            // State for review file path
+            let reviewFilePath: Option.Option<string> = Option.none()
 
             for (let iteration = 1; iteration <= maxIterations; iteration++) {
               yield* Queue.offer(queue, new IterationStart({ iteration, maxIterations }))
@@ -312,8 +312,8 @@ export const LoopServiceLayer = Layer.effect(
                 cugginoPath: storage.rootDir,
                 focus: opts.focus,
                 planPath: tempPlanPath,
-                codeReview: Option.isSome(codeReview) ? codeReview.value : undefined,
-                previousPlanPath: Option.isSome(codeReview) ? sessionPath : undefined
+                reviewPath: Option.isSome(reviewFilePath) ? reviewFilePath.value : undefined,
+                previousPlanPath: Option.isSome(reviewFilePath) ? sessionPath : undefined
               })
 
               const planEvents = agent.spawn({
@@ -462,12 +462,10 @@ export const LoopServiceLayer = Layer.effect(
                 }
                 case "RequestChanges": {
                   const review = yield* session.readReview()
-                  if (Option.isSome(review)) {
-                    codeReview = review
-                  } else {
+                  if (Option.isNone(review)) {
                     yield* session.writeReview((reviewTerminal as RequestChanges).content)
-                    codeReview = Option.some((reviewTerminal as RequestChanges).content)
                   }
+                  reviewFilePath = Option.some(reviewPath)
                 }
               }
             }

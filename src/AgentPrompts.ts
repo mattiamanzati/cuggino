@@ -17,7 +17,7 @@ export interface PlanningPromptOptions {
   readonly cugginoPath: string
   readonly focus: string
   readonly planPath: string
-  readonly codeReview?: string
+  readonly reviewPath?: string
   readonly previousPlanPath?: string
 }
 
@@ -160,20 +160,13 @@ TBD ITEMS:
  * System prompt for the planning agent.
  */
 export const planningPrompt = (opts: PlanningPromptOptions): string => {
-  const codeReviewSection = opts.codeReview
-    ? `
-## Code Review Feedback
-
-Address these issues from the previous implementation:
-
-${opts.codeReview}
-`
-    : ""
-
   const planningFiles: Array<FileEntry> = [
     { path: opts.specsPath, permission: "TASK_WRITABLE" },
     ...(opts.previousPlanPath
       ? [{ path: opts.previousPlanPath, permission: "READ_ONLY" as const }]
+      : []),
+    ...(opts.reviewPath
+      ? [{ path: opts.reviewPath, permission: "READ_ONLY" as const }]
       : []),
     { path: opts.planPath, permission: "WRITE" },
     { path: "Source code", permission: "READ_ONLY" },
@@ -181,7 +174,7 @@ ${opts.codeReview}
   ]
 
   const steps = opts.previousPlanPath
-    ? `1. Read the previous plan from ${opts.previousPlanPath} and the review feedback above
+    ? `1. Read the previous plan from ${opts.previousPlanPath} and the review from ${opts.reviewPath}
 2. Read specs from ${opts.specsPath}
 3. Investigate the codebase
 4. Write a revised plan to ${opts.planPath} that accounts for completed work, tasks that need fixing, and remaining tasks`
@@ -204,7 +197,6 @@ ${opts.focus}
 
 DO NOT PLAN FEATURES NOT INCLUDED IN THE FOCUS!
 
-${codeReviewSection}
 ${filesSection(planningFiles)}
 ## Steps
 
