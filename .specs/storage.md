@@ -25,6 +25,8 @@ Files:
 - `<uuid>.md` — Session file (plan + appended markers)
 - `<uuid>.review.md` — Code review file (written by reviewing agent on request changes)
 - `<uuid>.plan.md` — Temporary plan file (written by planning agent, moved to session file)
+- `<uuid>.check.txt` — Check command output (written before implementing and reviewing phases)
+- `<uuid>.setup.txt` — Setup command output (written after planning phase)
 
 ### `spec-issues/`
 

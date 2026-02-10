@@ -91,7 +91,7 @@ After each planning phase completes, the system can optionally run a setup comma
 - **Optional**: Only runs if `setupCommand` is configured in `.cuggino.json` and is non-empty
 - **Announced**: A "starting" event is emitted before the command runs, so the user knows what's happening
 - **Failure exits the loop**: If the setup command exits with a non-zero code, the loop emits an error and exits. Setup failures typically indicate a broken environment (e.g., failed dependency install) where continuing would be pointless.
-- **Output is not passed to agents**: Unlike the check command, setup output is for environment preparation and is not forwarded to implementing or reviewing agents.
+- **Output written to file**: The output stream is written directly to a session file (`<uuid>.setup.txt`) instead of being accumulated in memory. This is for logging purposes only — setup output is not referenced in agent prompts.
 - **Runs once per planning phase**: Not repeated for each implementing agent iteration
 
 ## Check Command
@@ -100,8 +100,8 @@ Before each implementing agent iteration and before the reviewing agent, the sys
 
 - **Optional**: Only runs if `checkCommand` is configured in `.cuggino.json` and is non-empty
 - **Announced**: A "starting" event is emitted before the command runs, so the user knows what's happening
-- **Output is passed to the agent**: The agent can use check failures to understand what needs fixing
-- **Failure is non-blocking**: The loop continues — check output (including errors) is context for the agent
+- **Output written to file**: The output stream is written directly to a session file (`<uuid>.check.txt`) instead of being accumulated in memory. The agent prompt references this file path and includes the exit code, so the agent can access the full output on demand without it being embedded in the CLI command.
+- **Failure is non-blocking**: The loop continues — the check output file (including errors) is context for the agent
 
 ### When Setup and Check Run
 
@@ -189,6 +189,8 @@ Project settings are stored in `.cuggino.json`, created and updated interactivel
 Each loop run is tracked in a **session** — a file that is initialized with the plan content and then appended to as agents work, accumulating progress notes and markers. Sessions are identified by UUIDv7 and stored in `.cuggino/wip/`. Session files are automatically cleaned up when the session ends (whether approved, spec issue, or max iterations reached).
 
 The reviewer always writes a review file alongside the session. This review describes what was implemented correctly, what needs fixing, and what tasks remain. On REQUEST_CHANGES, the plan agent receives both the previous plan and the review file to create a revised plan. The review file is cleared at the start of each reviewing phase to prevent stale review content from a previous iteration being used if the reviewer fails to write a new one.
+
+Check and setup command output is written to session files (`<uuid>.check.txt`, `<uuid>.setup.txt`) rather than held in memory. The check output file is overwritten before each implementing and reviewing phase. These files are cleaned up along with other session files when the session ends.
 
 ## Technology Stack
 

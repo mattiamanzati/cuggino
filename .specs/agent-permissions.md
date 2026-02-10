@@ -26,6 +26,7 @@ Each agent has explicit file access permissions. These are enforced via system p
 | planPath | — | WRITE | — | — | — |
 | previousPlanPath | — | READ-ONLY (if present) | — | — | — |
 | reviewPath | — | READ-ONLY (if present) | — | WRITE | — |
+| checkOutputPath | — | — | READ-ONLY | READ-ONLY | — |
 | sessionPath | — | — | READ-ONLY | READ-ONLY | — |
 | Source code | — | READ-ONLY | WRITE | READ-ONLY | READ-ONLY |
 | Everything else in cugginoPath | IGNORE | IGNORE | IGNORE | IGNORE | IGNORE |
