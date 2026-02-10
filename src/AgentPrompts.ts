@@ -386,13 +386,13 @@ ${opts.checkOutput}
     ? `
 ## Changes Since Baseline
 
-Run \`git diff ${opts.initialCommitHash}..HEAD\` to understand the scope of changes introduced in this session. Focus first your review on these changes and uncommitted additions/removals/modifications, and then to related code.
+Run \`git diff ${opts.initialCommitHash}..HEAD\` to understand the scope of changes introduced in this session. Focus first your review on these changes and uncommitted additions/removals/modifications.
 `
     : ""
 
   return `# Review Task
 
-Verify that the plan's tasks were correctly implemented. Also check consistency with specs as a secondary concern.
+Verify that the plan's tasks were correctly implemented.
 ${checkSection}${initialCommitSection}
 ${filesSection([
   { path: opts.specsPath, permission: "READ_ONLY" },
@@ -406,10 +406,9 @@ ${filesSection([
 1. Read the plan and progress from ${opts.sessionPath}
 2. Read specs from ${opts.specsPath}
 3. Review the code changes (do not modify)
-4. Check that plan tasks were implemented correctly (primary concern)
-5. Check consistency with specs (secondary concern)
-6. Write a review file to ${opts.reviewPath}
-7. Emit a terminal marker
+4. Check that plan tasks were implemented correctly according to plan
+5. Write a review file to ${opts.reviewPath}
+6. Emit a terminal marker
 
 ## Review File
 
