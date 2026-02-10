@@ -97,7 +97,7 @@ TBD ITEMS:
 - NEVER dismiss a TBD item about an implementation issue without asking the user. Even if the finding is about code (not specs), the user may want a backlog item created for it. Always present the finding and let the user decide: fix the spec, create a backlog item, or skip.
 - When the user chooses to DISMISS a TBD item (no spec change, no backlog item), record a brief summary of the dismissed finding in "${opts.memoryPath}" before deleting the TBD file. This prevents the audit agent from re-emitting the same finding in future runs.`
 
-type FilePermission = "READ_ONLY" | "TASK_WRITABLE" | "WRITE"
+type FilePermission = "READ_ONLY" | "TASK_WRITABLE" | "WRITE" | "READ_DELETE" | "IGNORE"
 
 interface FileEntry {
   readonly path: string
@@ -112,6 +112,10 @@ const filePermissionLabel = (permission: FilePermission): string => {
       return "AVOID CHANGES *"
     case "WRITE":
       return "WRITE"
+    case "READ_DELETE":
+      return "READ + DELETE"
+    case "IGNORE":
+      return "IGNORE"
   }
 }
 
@@ -120,17 +124,25 @@ const filesSection = (files: ReadonlyArray<FileEntry>): string => {
     .map((f) => `| ${f.path} | ${filePermissionLabel(f.permission)} |`)
     .join("\n")
   const hasTaskWritable = files.some((f) => f.permission === "TASK_WRITABLE")
-  const note = hasTaskWritable
-    ? `
-> **\\*** **AVOID CHANGES**: Do NOT modify, delete, or revert files in these paths — including via git operations (checkout, restore, reset). Exception: if the current focus or plan explicitly requires changes to these files, you CAN make those changes.
-`
-    : ""
+  const hasIgnore = files.some((f) => f.permission === "IGNORE")
+  const notes: Array<string> = []
+  if (hasTaskWritable) {
+    notes.push(
+      `> **\\*** **AVOID CHANGES**: Do NOT modify, delete, or revert files in these paths — including via git operations (checkout, restore, reset). Exception: if the current focus or plan explicitly requires changes to these files, you CAN make those changes.`
+    )
+  }
+  if (hasIgnore) {
+    notes.push(
+      `> **IGNORE**: Do NOT read, write, or access files in these paths — they are off-limits.`
+    )
+  }
+  const notesBlock = notes.length > 0 ? `\n${notes.join("\n\n")}\n` : ""
   return `## Files
 
 | Path | Permission |
 |------|------------|
 ${rows}
-${note}`
+${notesBlock}`
 }
 
 /**
