@@ -69,7 +69,7 @@ export interface LoopServiceShape {
   readonly run: (opts: LoopRunOptions) => Stream.Stream<
     LoopEvent,
     LoopError | LlmSessionError | SessionError | StorageError,
-    ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService
+    ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService | FileSystem.FileSystem
   >
 }
 
@@ -241,7 +241,7 @@ export const LoopServiceLayer = Layer.effect(
 
     return {
       run: (opts) =>
-        Stream.callback<LoopEvent, LoopError | LlmSessionError | SessionError | StorageError, ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService>((queue) => {
+        Stream.callback<LoopEvent, LoopError | LlmSessionError | SessionError | StorageError, ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService | FileSystem.FileSystem>((queue) => {
           /**
            * Helper to run a phase stream, emit events to the queue, and return the terminal marker.
            * Captures `queue` from the Stream.callback closure.
@@ -361,12 +361,13 @@ export const LoopServiceLayer = Layer.effect(
               // Setup command (after planning, before implementation)
               if (hasCommand(opts.setupCommand)) {
                 yield* Queue.offer(queue, new SetupCommandStarting({ iteration }))
-                const setupResult = yield* runShellCommand(opts.setupCommand, opts.cwd)
-                yield* Queue.offer(queue, new SetupCommandOutput({ iteration, filePath: setupResult.output, exitCode: setupResult.exitCode }))
-                if (setupResult.exitCode !== 0) {
+                const setupOutputPath = yield* session.getSetupOutputPath()
+                const setupExitCode = yield* runShellCommandToFile(opts.setupCommand, opts.cwd, setupOutputPath)
+                yield* Queue.offer(queue, new SetupCommandOutput({ iteration, filePath: setupOutputPath, exitCode: setupExitCode }))
+                if (setupExitCode !== 0) {
                   return yield* new LoopError({
                     phase: "planning",
-                    detail: `Setup command failed with exit code ${setupResult.exitCode}`
+                    detail: `Setup command failed with exit code ${setupExitCode}`
                   })
                 }
               }

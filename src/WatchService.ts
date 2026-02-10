@@ -44,7 +44,7 @@ export interface WatchServiceShape {
   readonly run: (opts: WatchRunOptions) => Stream.Stream<
     WatchEvent,
     WatchError,
-    ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService
+    ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService | FileSystem.FileSystem
   >
 }
 
@@ -183,7 +183,7 @@ export const WatchServiceLayer = Layer.effect(
 
     return {
       run: (opts) =>
-        Stream.callback<WatchEvent, WatchError, ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService>((queue) =>
+        Stream.callback<WatchEvent, WatchError, ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService | FileSystem.FileSystem>((queue) =>
           Effect.gen(function*() {
             while (true) {
               // Waiting phase: combine file count streams and wait until ready
