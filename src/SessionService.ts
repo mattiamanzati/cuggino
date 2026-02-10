@@ -1,4 +1,4 @@
-import { Effect, Layer, Option, ServiceMap, Data, FileSystem, Path, LayerMap } from "effect"
+import { Effect, Layer, Option, ServiceMap, Data, FileSystem, Path, LayerMap, Stream } from "effect"
 import type { LlmMarkerEvent } from "./LlmMarkerEvent.js"
 import { StorageService } from "./StorageService.js"
 
@@ -52,6 +52,15 @@ export interface SessionServiceShape {
   /** Get a temporary plan file path (for planning agent to write to) */
   readonly getTempPlanPath: () => Effect.Effect<string, SessionError>
 
+  /** Get the check output file path */
+  readonly getCheckOutputPath: () => Effect.Effect<string, SessionError>
+
+  /** Get the setup output file path */
+  readonly getSetupOutputPath: () => Effect.Effect<string, SessionError>
+
+  /** Write a command output stream directly to a file, returning the exit code */
+  readonly writeCommandOutput: (path: string, stream: Stream.Stream<Uint8Array>) => Effect.Effect<void, SessionError>
+
   /** Read from temp plan file and move content to session file, then delete temp */
   readonly commitTempPlan: () => Effect.Effect<void, SessionError>
 }
@@ -100,6 +109,8 @@ export class SessionServiceMap extends LayerMap.Service<SessionServiceMap>()("Se
       const sessionPath = path.join(storage.wipDir, `${sessionId}.md`)
       const reviewPath = path.join(storage.wipDir, `${sessionId}.review.md`)
       const tempPlanPath = path.join(storage.wipDir, `${sessionId}.plan.md`)
+      const checkOutputPath = path.join(storage.wipDir, `${sessionId}.check.txt`)
+      const setupOutputPath = path.join(storage.wipDir, `${sessionId}.setup.txt`)
 
       // Create the session file
       yield* fs.writeFileString(sessionPath, "")
@@ -110,6 +121,8 @@ export class SessionServiceMap extends LayerMap.Service<SessionServiceMap>()("Se
           if (yield* fs.exists(sessionPath)) yield* fs.remove(sessionPath)
           if (yield* fs.exists(reviewPath)) yield* fs.remove(reviewPath)
           if (yield* fs.exists(tempPlanPath)) yield* fs.remove(tempPlanPath)
+          if (yield* fs.exists(checkOutputPath)) yield* fs.remove(checkOutputPath)
+          if (yield* fs.exists(setupOutputPath)) yield* fs.remove(setupOutputPath)
         }).pipe(Effect.ignore)
       )
 
@@ -169,6 +182,17 @@ export class SessionServiceMap extends LayerMap.Service<SessionServiceMap>()("Se
         getSessionPath: () => Effect.succeed(sessionPath),
         getReviewPath: () => Effect.succeed(reviewPath),
         getTempPlanPath: () => Effect.succeed(tempPlanPath),
+        getCheckOutputPath: () => Effect.succeed(checkOutputPath),
+        getSetupOutputPath: () => Effect.succeed(setupOutputPath),
+
+        writeCommandOutput: (filePath: string, stream: Stream.Stream<Uint8Array>) =>
+          Stream.run(stream, fs.sink(filePath)).pipe(
+            Effect.catch((cause) =>
+              cause instanceof SessionError
+                ? Effect.fail(cause)
+                : Effect.fail(new SessionError({ operation: "writeCommandOutput", sessionId, cause }))
+            )
+          ),
 
         commitTempPlan: () =>
           Effect.gen(function*() {
