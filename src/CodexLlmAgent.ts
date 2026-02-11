@@ -54,6 +54,9 @@ const parseToolInput = (value: unknown): unknown => {
   }
 }
 
+const developerInstructionsConfig = (systemPrompt: string): string =>
+  `developer_instructions=${JSON.stringify(systemPrompt)}`
+
 /**
  * Convert raw Codex JSON to LlmAgentEvent(s).
  * Returns an Effect that can fail with LlmSessionError on turn.failed,
@@ -154,7 +157,7 @@ const createSpawnStream = (
   }
 
   if (options.systemPrompt) {
-    args.push("--config", `developer_instructions=${options.systemPrompt}`)
+    args.push("--config", developerInstructionsConfig(options.systemPrompt))
   }
 
   // Add the prompt as the final positional argument
@@ -217,7 +220,7 @@ const createInteractiveSession = (
   }
 
   if (options.systemPrompt) {
-    args.push("--config", `developer_instructions=${options.systemPrompt}`)
+    args.push("--config", developerInstructionsConfig(options.systemPrompt))
   }
 
   return Effect.callback<number, LlmSessionError>((resume) => {
