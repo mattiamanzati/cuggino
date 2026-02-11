@@ -1,7 +1,7 @@
 {
   "name": "cuggino",
   "description": "A dangerous autonomous coding loop focused on specification discussion",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "author": "mattiamanzati",
   "repository": {
     "type": "git",
