@@ -18,9 +18,14 @@ import {
 interface RawCodexEvent {
   type: string
   item?: {
+    id?: string
     type?: string
     name?: string
-    arguments?: string
+    arguments?: unknown
+    text?: string
+    command?: string
+    aggregated_output?: string
+    exit_code?: number | null
     output?: string
     status?: string
     content?: Array<{
@@ -37,6 +42,18 @@ interface RawCodexEvent {
 const isCodexEvent = (value: unknown): value is RawCodexEvent =>
   typeof value === "object" && value !== null && "type" in value
 
+const parseToolInput = (value: unknown): unknown => {
+  if (typeof value !== "string") {
+    return value ?? null
+  }
+
+  try {
+    return JSON.parse(value)
+  } catch {
+    return value
+  }
+}
+
 /**
  * Convert raw Codex JSON to LlmAgentEvent(s).
  * Returns an Effect that can fail with LlmSessionError on turn.failed,
@@ -47,10 +64,7 @@ const parseCodexEvent = (json: unknown): Effect.Effect<Array<LlmAgentEvent>, Llm
     return Effect.succeed([new PingEvent({ timestamp: DateTime.nowUnsafe() })])
   }
 
-  const events: Array<LlmAgentEvent> = [
-    // Synthetic PingEvent for every incoming line
-    new PingEvent({ timestamp: DateTime.nowUnsafe() })
-  ]
+  const events: Array<LlmAgentEvent> = []
 
   switch (json.type) {
     case "thread.started":
@@ -61,7 +75,12 @@ const parseCodexEvent = (json: unknown): Effect.Effect<Array<LlmAgentEvent>, Llm
       if (json.item?.type === "function_call" && typeof json.item.name === "string") {
         events.push(new ToolCall({
           name: json.item.name,
-          input: json.item.arguments ?? null
+          input: parseToolInput(json.item.arguments)
+        }))
+      } else if (json.item?.type === "command_execution" && typeof json.item.command === "string") {
+        events.push(new ToolCall({
+          name: "Bash",
+          input: { command: json.item.command }
         }))
       }
       break
@@ -73,6 +92,14 @@ const parseCodexEvent = (json: unknown): Effect.Effect<Array<LlmAgentEvent>, Llm
           output: json.item.output ?? "",
           isError: json.item.status === "error"
         }))
+      } else if (json.item?.type === "command_execution") {
+        events.push(new ToolResult({
+          name: "Bash",
+          output: json.item.aggregated_output ?? "",
+          isError: json.item.status === "error" || (typeof json.item.exit_code === "number" && json.item.exit_code !== 0)
+        }))
+      } else if (json.item?.type === "agent_message" && typeof json.item.text === "string") {
+        events.push(new AgentMessage({ text: json.item.text }))
       } else if (json.item?.type === "message" && json.item.content) {
         for (const block of json.item.content) {
           if (block.type === "text" && typeof block.text === "string") {
@@ -90,11 +117,15 @@ const parseCodexEvent = (json: unknown): Effect.Effect<Array<LlmAgentEvent>, Llm
       return Effect.fail(new LlmSessionError({ message: json.error ?? "Codex turn failed" }))
 
     default:
-      // Unknown event type - only emit the synthetic PingEvent
+      // Unknown event type - emit a PingEvent as fallback below
       break
   }
 
-  return Effect.succeed(events)
+  return Effect.succeed(
+    events.length > 0
+      ? events
+      : [new PingEvent({ timestamp: DateTime.nowUnsafe() })]
+  )
 }
 
 /**
@@ -144,8 +175,8 @@ const createSpawnStream = (
         }
       })
     ).pipe(
-      Effect.map((child) =>
-        NodeStream.fromReadable<Uint8Array, LlmSessionError>({
+      Effect.map((child) => {
+        const stdoutStream = NodeStream.fromReadable<Uint8Array, LlmSessionError>({
           evaluate: () => child.stdout!,
           onError: (err) => new LlmSessionError({ message: err instanceof Error ? err.message : String(err) })
         }).pipe(
@@ -156,7 +187,19 @@ const createSpawnStream = (
           Stream.mapEffect((json: unknown) => parseCodexEvent(json)),
           Stream.flatMap((events) => Stream.fromIterable(events))
         )
-      )
+
+        const stderrStream = NodeStream.fromReadable<Uint8Array, LlmSessionError>({
+          evaluate: () => child.stderr!,
+          onError: (err) => new LlmSessionError({ message: err instanceof Error ? err.message : String(err) })
+        }).pipe(
+          Stream.decodeText("utf-8"),
+          Stream.splitLines,
+          Stream.map(() => [] as Array<LlmAgentEvent>),
+          Stream.flatMap((events) => Stream.fromIterable(events))
+        )
+
+        return Stream.merge(stdoutStream, stderrStream)
+      })
     )
   )
 }
