@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.12
+
+### Patch Changes
+
+- [`8352fb7`](https://github.com/mattiamanzati/cuggino/commit/8352fb72a9f647d856d9a4feb3436a3f769646b4) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - catchcause
+
 ## 0.0.11
 
 ### Patch Changes
