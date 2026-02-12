@@ -17,8 +17,11 @@ export interface PlanningPromptOptions {
   readonly cugginoPath: string
   readonly focus: string
   readonly planPath: string
-  readonly reviewPath?: string
-  readonly previousPlanPath?: string
+}
+
+export interface ReplanningPromptOptions extends PlanningPromptOptions {
+  readonly reviewPath: string
+  readonly previousPlanPath: string
 }
 
 export interface ImplementingPromptOptions {
@@ -161,49 +164,34 @@ TBD ITEMS:
 /**
  * System prompt for the planning agent.
  */
-export const planningPrompt = (opts: PlanningPromptOptions): string => {
+const planningPromptTemplate = (
+  opts: PlanningPromptOptions,
+  steps: string,
+  extraSections = "",
+  extraFiles: ReadonlyArray<FileEntry> = []
+): string => {
   const planningFiles: Array<FileEntry> = [
     { path: opts.specsPath, permission: "TASK_WRITABLE" },
-    ...(opts.previousPlanPath
-      ? [{ path: opts.previousPlanPath, permission: "READ_ONLY" as const }]
-      : []),
-    ...(opts.reviewPath
-      ? [{ path: opts.reviewPath, permission: "READ_ONLY" as const }]
-      : []),
+    ...extraFiles,
     { path: opts.planPath, permission: "WRITE" },
     { path: "Source code", permission: "READ_ONLY" },
     { path: `Everything else in ${opts.cugginoPath}`, permission: "IGNORE" },
   ]
 
-  const steps = opts.previousPlanPath
-    ? `1. Read the previous plan from ${opts.previousPlanPath} and the review from ${opts.reviewPath}
-2. Read specs from ${opts.specsPath}
-3. Investigate the codebase
-4. Write a revised plan to ${opts.planPath} that accounts for tasks that need fixing and remaining tasks (fully completed activities according to the review file must be omitted)`
-    : `1. Read specs from ${opts.specsPath}
-2. Investigate the codebase
-3. Write plan to ${opts.planPath}`
-
-  const selfContainedNote = opts.previousPlanPath
-    ? `
-## Self-Contained Output
-
-The revised plan must be self-contained — it replaces the previous plan entirely. Do not reference or depend on the previous plan (e.g., "as in the previous plan...", "same as before..."). The implementing agent only sees the current plan, so all necessary information must be included.
-`
-    : ""
-
   return `# Planning Task
 
-Your current focus is:
+  ## Current Focus
+**DO NOT PLAN FEATURES NOT INCLUDED IN THE FOCUS!**
 ${opts.focus}
 
-DO NOT PLAN FEATURES NOT INCLUDED IN THE FOCUS!
+
 
 ${filesSection(planningFiles)}
 ## Steps
 
 ${steps}
-${selfContainedNote}
+${extraSections}
+
 ## Plan Format
 
 \`\`\`markdown
@@ -223,7 +211,7 @@ Targeted outcome of this task, what should be implemented or fixed, what is curr
 
 ### Verification
 - How to verify this task is complete
-- Expected behavior or test to run
+- Expected behavior
 
 ## Task 2: [Task Title]
 ...
@@ -257,6 +245,39 @@ Plan written successfully.
 \`\`\`
 
 **Important**: First write the plan file, then emit PLAN_COMPLETE on a new message.`
+}
+
+export const planningPrompt = (opts: PlanningPromptOptions): string => {
+  const steps = `1. Read specs related to current focus from ${opts.specsPath}
+2. Investigate current code state for the current focus
+3. Write a new plan to ${opts.planPath} for this focus from specs + current code state`
+
+  const sections = `
+## Plan Rules
+
+Create a fresh plan from current focus, relevant specs, and current code state. Keep the plan self-contained for implementation.`
+
+  return planningPromptTemplate(opts, steps, sections)
+}
+
+export const replanningPrompt = (opts: ReplanningPromptOptions): string => {
+  const steps = `1. Read specs related to current focus from ${opts.specsPath}
+2. Investigate current code state for the current focus
+3. Read the review from ${opts.reviewPath} and read only the progress section from ${opts.previousPlanPath}
+4. Write a new plan to ${opts.planPath} for this focus from specs + current code state + review changes to address
+5. Omit work already completed according to prior progress/review`
+
+  const sections = `
+## Replanning Rules
+
+The new plan fully replaces the previous one. Do not reuse old plan text, structure, or wording.
+Use the review file only for requested fixes and unresolved work.
+The resulting plan must be self-contained and implementation-ready.`
+
+  return planningPromptTemplate(opts, steps, sections, [
+    { path: opts.previousPlanPath, permission: "READ_ONLY" },
+    { path: opts.reviewPath, permission: "READ_ONLY" },
+  ])
 }
 
 /**
@@ -401,7 +422,7 @@ Check command exited with code \`${opts.checkExitCode}\`. The full output is ava
     ? `
 ## Changes Since Baseline
 
-Run \`git diff ${opts.initialCommitHash}..HEAD\` to understand the scope of changes introduced in this session. Focus first your review on these changes and uncommitted additions/removals/modifications.
+Run \`git diff ${opts.initialCommitHash}..HEAD\` only to gather context. Do not ask for a review target and do not fail review due to out-of-scope committed changes if plan tasks are correctly implemented.
 `
     : ""
 
@@ -420,18 +441,17 @@ ${filesSection([
 ## Steps
 
 1. Read the plan and progress from ${opts.sessionPath}
-2. Read specs related to the plan tasks from ${opts.specsPath}
-3. Review the code checking that plan tasks were implemented correctly according to plan
-4. Perform any kind of needed verification e.g. running test suites, typechecking, ensuring that file exists, etc... 
-5. If something in the plan drifts from the specs, do not assume the specs will be updated or are updated: either report in the review how to update the plan accordingly or report a spec issue.
-6. Write a review file to ${opts.reviewPath}
-7. Emit a terminal marker
+2. Review the code to confirm the changes described by the plan are actually implemented and in place
+3. Perform needed verification (e.g. test suites, typechecking, checking file presence/behavior)
+4. Write a review file to ${opts.reviewPath}
+5. Emit a terminal marker
 
 ## Constraints
 
 - Do NOT use interactive user-question tools (e.g., AskUserQuestion).
 - If review cannot be completed without user intervention or a product decision, emit a terminal marker **SPEC_ISSUE** with the exact clarification needed.
 - The workspace may already contain modified, uncommitted spec files from other contributors. Treat them as valid project context, and do not revert or discard them.
+- Review outcome must be based on plan implementation correctness. Committed changes outside the plan scope are acceptable unless they break or contradict the implemented plan/spec behavior.
 
 ## Review File
 

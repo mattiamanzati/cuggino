@@ -4,7 +4,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { LlmAgent } from "./LlmAgent.js"
 import { SessionService, SessionServiceMap, SessionError, SessionKey } from "./SessionService.js"
 import { StorageService, StorageError } from "./StorageService.js"
-import { planningPrompt, implementingPrompt, reviewingPrompt } from "./AgentPrompts.js"
+import { planningPrompt, replanningPrompt, implementingPrompt, reviewingPrompt } from "./AgentPrompts.js"
 import { extractMarkers, type MarkerExtractorConfig } from "./extractMarkers.js"
 import {
   Note,
@@ -304,14 +304,21 @@ export const LoopServiceLayer = Layer.effect(
               yield* Queue.offer(queue, new PlanningStart({ iteration }))
               const tempPlanPath = yield* session.getTempPlanPath()
 
-              const planningSystemPrompt = planningPrompt({
-                specsPath: opts.specsPath,
-                cugginoPath: storage.rootDir,
-                focus: opts.focus,
-                planPath: tempPlanPath,
-                reviewPath: Option.isSome(reviewFilePath) ? reviewFilePath.value : undefined,
-                previousPlanPath: Option.isSome(reviewFilePath) ? sessionPath : undefined
-              })
+              const planningSystemPrompt = Option.isSome(reviewFilePath)
+                ? replanningPrompt({
+                    specsPath: opts.specsPath,
+                    cugginoPath: storage.rootDir,
+                    focus: opts.focus,
+                    planPath: tempPlanPath,
+                    reviewPath: reviewFilePath.value,
+                    previousPlanPath: sessionPath
+                  })
+                : planningPrompt({
+                    specsPath: opts.specsPath,
+                    cugginoPath: storage.rootDir,
+                    focus: opts.focus,
+                    planPath: tempPlanPath
+                  })
 
               const planEvents = agent.spawn({
                 prompt: `Please create an implementation plan for: ${opts.focus}. Write the plan to ${tempPlanPath}`,
