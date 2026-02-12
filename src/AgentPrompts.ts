@@ -226,11 +226,13 @@ Each task should have:
 
 - Do NOT use interactive user-question tools (e.g., AskUserQuestion).
 - If user intervention or a product decision is required, emit a terminal marker **SPEC_ISSUE** with the exact missing decision and stop.
+- If the current focus conflicts with the specs, emit a terminal marker **SPEC_ISSUE** describing the focus/spec conflict and stop.
+- If relevant specs conflict with each other, emit a terminal marker **SPEC_ISSUE** describing the exact spec-to-spec conflict and stop.
 - The workspace may already contain modified, uncommitted spec files from other contributors. Treat them as valid project context, and do not revert or discard them.
 
 ## Markers (emit exactly one before exiting)
 
-**SPEC_ISSUE** - If specs are unclear or inconsistent:
+**SPEC_ISSUE** - If specs are unclear, inconsistent, conflict with focus, or conflict with each other:
 \`\`\`
 <SPEC_ISSUE>
 Description of the issue...
@@ -322,6 +324,8 @@ ${opts.checkOutputPath ? `0. Read the check output file at \`${opts.checkOutputP
 
 - Do NOT use interactive user-question tools (e.g., AskUserQuestion).
 - If user intervention or a product decision is required to continue safely, emit a terminal marker **SPEC_ISSUE** describing exactly what decision is needed and exit.
+- If the current focus conflicts with the specs, emit a terminal marker **SPEC_ISSUE** describing the focus/spec conflict and stop.
+- If relevant specs conflict with each other, emit a terminal marker **SPEC_ISSUE** describing the exact spec-to-spec conflict and stop.
 - The workspace may already contain modified, uncommitted spec files from other contributors. Treat them as valid project context, and do not revert or discard them.
 
 ## Markers
@@ -338,7 +342,7 @@ What was discovered or decided...
 
 ### Terminal (emit one before exiting)
 
-**SPEC_ISSUE** - Specs are unclear, incomplete or inconsistent (exit immediately):
+**SPEC_ISSUE** - Specs are unclear, incomplete, inconsistent, conflict with focus, or conflict with each other (exit immediately):
 \`\`\`
 <SPEC_ISSUE>
 Description of the issue...
