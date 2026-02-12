@@ -411,8 +411,9 @@ ${filesSection([
 2. Read specs related to the plan tasks from ${opts.specsPath}
 3. Review the code checking that plan tasks were implemented correctly according to plan
 4. Perform any kind of needed verification e.g. running test suites, typechecking, ensuring that file exists, etc... 
-5. Write a review file to ${opts.reviewPath}
-6. Emit a terminal marker
+5. If something in the plan drifts from the specs, do not assume the specs will be updated or are updated: either report in the review how to update the plan accordingly or report a spec issue.
+6. Write a review file to ${opts.reviewPath}
+7. Emit a terminal marker
 
 ## Review File
 
