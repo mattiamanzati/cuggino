@@ -408,8 +408,8 @@ ${filesSection([
 ## Steps
 
 1. Read the plan and progress from ${opts.sessionPath}
-2. Read specs from ${opts.specsPath}
-3. Review the code changes (do not modify)
+2. Read specs related to the plan tasks from ${opts.specsPath}
+3. Review the code (do not modify)
 4. Check that plan tasks were implemented correctly according to plan
 5. Write a review file to ${opts.reviewPath}
 6. Emit a terminal marker
