@@ -138,7 +138,7 @@ BACKLOG:
 - Name files so that alphabetical sorting reflects the desired execution order (e.g., "001-add-auth.md", "002-refactor-api.md").
 - Tasks in the backlog will be picked up and executed in filename order by the coding loop.
 - Before creating backlog items, always propose the list to the user and ask for confirmation.
-- If updating a previously updated backlog item fails because the file does not exist anymore, it means it has been already processed, and a new backlog item should be created instead.
+- If a backlog item that was previously discussed or updated disappears from "${opts.backlogPath}" (or an update fails because the file no longer exists), treat it as already implemented by the coding loop; do not recreate or edit it, and create a new backlog item for any additional work instead.
 
 SPEC ISSUES:
 - The folder "${opts.specIssuesPath}" may contain pending spec issue files.
@@ -234,6 +234,12 @@ Each task should have:
 - Description of the task
 - Verification steps to confirm completion and acceptance criteria
 
+## Constraints
+
+- Do NOT use interactive user-question tools (e.g., AskUserQuestion).
+- If user intervention or a product decision is required, emit a terminal marker **SPEC_ISSUE** with the exact missing decision and stop.
+- The workspace may already contain modified, uncommitted spec files from other contributors. Treat them as valid project context, and do not revert or discard them.
+
 ## Markers (emit exactly one before exiting)
 
 **SPEC_ISSUE** - If specs are unclear or inconsistent:
@@ -290,6 +296,12 @@ ${opts.checkOutputPath ? `0. Read the check output file at \`${opts.checkOutputP
 4. Implement that task
 5. Emit note markers as you work for findings related to the task
 6. Emit a terminal marker
+
+## Constraints
+
+- Do NOT use interactive user-question tools (e.g., AskUserQuestion).
+- If user intervention or a product decision is required to continue safely, emit a terminal marker **SPEC_ISSUE** describing exactly what decision is needed and exit.
+- The workspace may already contain modified, uncommitted spec files from other contributors. Treat them as valid project context, and do not revert or discard them.
 
 ## Markers
 
@@ -414,6 +426,12 @@ ${filesSection([
 5. If something in the plan drifts from the specs, do not assume the specs will be updated or are updated: either report in the review how to update the plan accordingly or report a spec issue.
 6. Write a review file to ${opts.reviewPath}
 7. Emit a terminal marker
+
+## Constraints
+
+- Do NOT use interactive user-question tools (e.g., AskUserQuestion).
+- If review cannot be completed without user intervention or a product decision, emit a terminal marker **SPEC_ISSUE** with the exact clarification needed.
+- The workspace may already contain modified, uncommitted spec files from other contributors. Treat them as valid project context, and do not revert or discard them.
 
 ## Review File
 
