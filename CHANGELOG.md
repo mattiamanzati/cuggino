@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.19
+
+### Patch Changes
+
+- [`a01b311`](https://github.com/mattiamanzati/cuggino/commit/a01b311abff977b640bc04e36eb85011bbe1835e) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - wording
+
 ## 0.0.18
 
 ### Patch Changes
