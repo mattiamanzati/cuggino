@@ -221,6 +221,7 @@ Each task should have:
 - Clear subtasks to implement
 - Description of the task
 - Verification steps to confirm completion and acceptance criteria
+- Verification that can be executed independently by the reviewer from repository state and command output (no implementation-owned evidence files)
 
 ## Constraints
 
@@ -229,6 +230,9 @@ Each task should have:
 - If the current focus conflicts with the specs, emit a terminal marker **SPEC_ISSUE** describing the focus/spec conflict and stop.
 - If relevant specs conflict with each other, emit a terminal marker **SPEC_ISSUE** describing the exact spec-to-spec conflict and stop.
 - The workspace may already contain modified, uncommitted spec files from other contributors. Treat them as valid project context, and do not revert or discard them.
+- Do NOT plan any task that requires creating, editing, or deleting files under ${opts.cugginoPath}.
+- Do NOT require implementation evidence artifacts (for example WIP logs, evidence docs, or report files) as task deliverables.
+- Keep task deliverables limited to code/spec/test/config changes in writable project paths plus reviewer-verifiable checks.
 
 ## Markers (emit exactly one before exiting)
 
@@ -304,11 +308,11 @@ Implement tasks from the plan.
 ${checkSection}
 ${filesSection([
   { path: opts.specsPath, permission: "TASK_WRITABLE" },
-  { path: `Everything else in ${opts.cugginoPath}`, permission: "IGNORE" },
   { path: opts.planPath, permission: "READ_ONLY" },
   { path: opts.sessionPath, permission: "READ_ONLY" },
   ...checkFileEntry,
   { path: "Source code", permission: "WRITE" },
+  { path: `Everything else in ${opts.cugginoPath}`, permission: "IGNORE" },
 ])}
 ## Steps
 
@@ -327,6 +331,8 @@ ${opts.checkOutputPath ? `0. Read the check output file at \`${opts.checkOutputP
 - If the current focus conflicts with the specs, emit a terminal marker **SPEC_ISSUE** describing the focus/spec conflict and stop.
 - If relevant specs conflict with each other, emit a terminal marker **SPEC_ISSUE** describing the exact spec-to-spec conflict and stop.
 - The workspace may already contain modified, uncommitted spec files from other contributors. Treat them as valid project context, and do not revert or discard them.
+- Do NOT create or update implementation evidence files. Reviewer verification is authoritative.
+- Do NOT create, edit, or delete files under ${opts.cugginoPath} unless explicitly marked writable in the file table.
 
 ## Markers
 
@@ -436,11 +442,11 @@ Verify that the plan's tasks were correctly implemented.
 ${checkSection}${initialCommitSection}
 ${filesSection([
   { path: opts.specsPath, permission: "READ_ONLY" },
-  { path: `Everything else in ${opts.cugginoPath}`, permission: "IGNORE" },
   { path: opts.sessionPath, permission: "READ_ONLY" },
   ...checkFileEntry,
   { path: "Source code", permission: "READ_ONLY" },
   { path: opts.reviewPath, permission: "WRITE" },
+  { path: `Everything else in ${opts.cugginoPath}`, permission: "IGNORE" },
 ])}
 ## Steps
 
@@ -456,6 +462,7 @@ ${filesSection([
 - If review cannot be completed without user intervention or a product decision, emit a terminal marker **SPEC_ISSUE** with the exact clarification needed.
 - The workspace may already contain modified, uncommitted spec files from other contributors. Treat them as valid project context, and do not revert or discard them.
 - Review outcome must be based on plan implementation correctness. Committed changes outside the plan scope are acceptable unless they break or contradict the implemented plan/spec behavior.
+- Perform verification independently; do not rely on implementation-provided evidence artifacts.
 
 ## Review File
 
