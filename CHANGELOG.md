@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.22
+
+### Patch Changes
+
+- [`7e89c7d`](https://github.com/mattiamanzati/cuggino/commit/7e89c7de4efb17d6f9a5c73dbfcfd2b300cf8196) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - remove cleanup wip on start
+
 ## 0.0.21
 
 ### Patch Changes
