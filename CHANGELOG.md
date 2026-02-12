@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.16
+
+### Patch Changes
+
+- [`bac8ee3`](https://github.com/mattiamanzati/cuggino/commit/bac8ee33b92e2b9e0a5ca64a4ed95e3f66f15901) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - update wording
+
 ## 0.0.15
 
 ### Patch Changes
