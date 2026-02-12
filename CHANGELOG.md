@@ -1,5 +1,13 @@
 # cuggino
 
+## 0.0.17
+
+### Patch Changes
+
+- [`e2fa22d`](https://github.com/mattiamanzati/cuggino/commit/e2fa22d744212af51c9a8e158844197b7b5a30e9) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - wording
+
+- [`b9eb55a`](https://github.com/mattiamanzati/cuggino/commit/b9eb55aab1e6c23696d11aa5b0f6ca87088ae0fd) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - include verifications
+
 ## 0.0.16
 
 ### Patch Changes
