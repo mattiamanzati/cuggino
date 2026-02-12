@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.15
+
+### Patch Changes
+
+- [`b790b12`](https://github.com/mattiamanzati/cuggino/commit/b790b1201f0b1cd8d4ba1cf54af10c67e7b1f7bd) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - avoid tickboxes
+
 ## 0.0.14
 
 ### Patch Changes

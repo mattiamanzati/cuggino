@@ -1,5 +1,0 @@
----
-"cuggino": patch
----
-
-avoid tickboxes
