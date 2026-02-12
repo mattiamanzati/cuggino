@@ -218,12 +218,12 @@ Targeted outcome of this task, what should be implemented or fixed, what is curr
 - Related spec files or sources or useful resources to reference for context
 
 ### Subtasks
-- [ ] Subtask 1.1
-- [ ] Subtask 1.2
+- Subtask 1.1
+- Subtask 1.2
 
 ### Verification
-- [ ] How to verify this task is complete
-- [ ] Expected behavior or test to run
+- How to verify this task is complete
+- Expected behavior or test to run
 
 ## Task 2: [Task Title]
 ...
