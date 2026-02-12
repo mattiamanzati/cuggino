@@ -1,0 +1,5 @@
+---
+"cuggino": patch
+---
+
+include verifications

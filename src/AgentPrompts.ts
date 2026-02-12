@@ -295,7 +295,7 @@ ${opts.checkOutputPath ? `0. Read the check output file at \`${opts.checkOutputP
 
 ### Inline (emit as you work)
 
-**NOTE** - Observations and decisions:
+**NOTE** - Observations, verification results and decisions:
 \`\`\`
 <NOTE>
 What was discovered or decided...
@@ -417,6 +417,7 @@ ${filesSection([
 ## Review File
 
 ALWAYS write a review file to ${opts.reviewPath}, regardless of the outcome. The review should describe:
+- What has been verified
 - What was done correctly
 - What needs fixing (if anything)
 - What tasks from the plan remain
