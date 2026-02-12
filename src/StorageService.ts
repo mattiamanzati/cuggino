@@ -101,12 +101,6 @@ export const StorageServiceLayer = (cwd: string) => Layer.effect(
     yield* fs.makeDirectory(backlogDir, { recursive: true })
     yield* fs.makeDirectory(tbdDir, { recursive: true })
 
-    // Clean up stale WIP files from previous sessions
-    const wipFiles = yield* fs.readDirectory(wipDir)
-    for (const file of wipFiles) {
-      yield* fs.remove(path.join(wipDir, file))
-    }
-
     return {
       cwd,
       rootDir,
