@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.18
+
+### Patch Changes
+
+- [`41ceeb9`](https://github.com/mattiamanzati/cuggino/commit/41ceeb9bbf6b7b849dc4fd5f3da6e655fdd544c7) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - allow review to run verifications
+
 ## 0.0.17
 
 ### Patch Changes
