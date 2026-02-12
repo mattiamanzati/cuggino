@@ -179,7 +179,7 @@ export const planningPrompt = (opts: PlanningPromptOptions): string => {
     ? `1. Read the previous plan from ${opts.previousPlanPath} and the review from ${opts.reviewPath}
 2. Read specs from ${opts.specsPath}
 3. Investigate the codebase
-4. Write a revised plan to ${opts.planPath} that accounts for completed work, tasks that need fixing, and remaining tasks`
+4. Write a revised plan to ${opts.planPath} that accounts for tasks that need fixing and remaining tasks (fully completed activities according to the review file must be omitted)`
     : `1. Read specs from ${opts.specsPath}
 2. Investigate the codebase
 3. Write plan to ${opts.planPath}`
