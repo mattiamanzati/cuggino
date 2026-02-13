@@ -36,6 +36,7 @@ export interface WatchRunOptions {
   readonly push?: string
   readonly audit?: boolean
   readonly notify?: "none" | "osx-notification"
+  readonly slowMode?: boolean
 }
 
 export type WatchEvent = LoopEvent | WatchLoopEvent
@@ -263,7 +264,8 @@ export const WatchServiceLayer = Layer.effect(
                 setupCommand: opts.setupCommand,
                 checkCommand: opts.checkCommand,
                 commit: opts.commit,
-                push: opts.push
+                push: opts.push,
+                slowMode: opts.slowMode
               }).pipe(
                 Stream.runForEach((event) =>
                   Effect.gen(function*() {

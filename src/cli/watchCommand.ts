@@ -16,6 +16,9 @@ export const watchCommand = Command.make(
       Flag.withAlias("a"),
       Flag.withDefault("claude"),
       Flag.withDescription("LLM provider to use")
+    ),
+    slow: Flag.boolean("slow").pipe(
+      Flag.withDescription("Run the loop in slow mode (plan → implement → review each iteration)")
     )
   },
   (args) =>
@@ -31,7 +34,8 @@ export const watchCommand = Command.make(
         commit: config.commit,
         push: config.push,
         audit: config.audit,
-        notify: config.notify
+        notify: config.notify,
+        slowMode: args.slow
       }).pipe(
         (s) => withCliOutput(s, args.verbose),
         Stream.runDrain
