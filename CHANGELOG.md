@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.24
+
+### Patch Changes
+
+- [`a008b88`](https://github.com/mattiamanzati/cuggino/commit/a008b88c9fb85218e8650ceeb529eb31f47d50cb) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - fast mode
+
 ## 0.0.23
 
 ### Patch Changes
