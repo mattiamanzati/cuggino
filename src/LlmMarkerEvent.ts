@@ -40,6 +40,17 @@ export class Done extends Schema.Class<Done>("Done")({
 }
 
 /**
+ * No more work marker - all plan tasks are already implemented
+ */
+export class NoMoreWork extends Schema.Class<NoMoreWork>("NoMoreWork")({
+  _tag: Schema.tag("NoMoreWork"),
+  content: Schema.String
+}) {
+  [LlmMarkerEventTypeId]: LlmMarkerEventTypeId = LlmMarkerEventTypeId;
+  [LlmTerminalMarkerEventTypeId]: LlmTerminalMarkerEventTypeId = LlmTerminalMarkerEventTypeId
+}
+
+/**
  * Approved marker - approval of implementation or changes
  */
 export class Approved extends Schema.Class<Approved>("Approved")({
@@ -89,6 +100,7 @@ export type LlmMarkerEvent =
   | Note
   | SpecIssue
   | Done
+  | NoMoreWork
   | Approved
   | RequestChanges
   | PlanComplete
@@ -101,6 +113,7 @@ export const LlmMarkerEventSchema = Schema.Union([
   Note,
   SpecIssue,
   Done,
+  NoMoreWork,
   Approved,
   RequestChanges,
   PlanComplete,
@@ -111,6 +124,7 @@ export type LlmTerminalMarkerEvent =
   | SpecIssue
   | PlanComplete
   | Done
+  | NoMoreWork
   | Approved
   | RequestChanges
 
@@ -130,6 +144,7 @@ export const defaultMarkerConfig: MarkerExtractorConfig<{
   NOTE: Note
   SPEC_ISSUE: SpecIssue
   DONE: Done
+  NO_MORE_WORK: NoMoreWork
   APPROVED: Approved
   REQUEST_CHANGES: RequestChanges
   PLAN_COMPLETE: PlanComplete
@@ -138,6 +153,7 @@ export const defaultMarkerConfig: MarkerExtractorConfig<{
   NOTE: (content) => new Note({ content }),
   SPEC_ISSUE: (content) => new SpecIssue({ content }),
   DONE: (content) => new Done({ content }),
+  NO_MORE_WORK: (content) => new NoMoreWork({ content }),
   APPROVED: (content) => new Approved({ content }),
   REQUEST_CHANGES: (content) => new RequestChanges({ content }),
   PLAN_COMPLETE: (content) => new PlanComplete({ content }),

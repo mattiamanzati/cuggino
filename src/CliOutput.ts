@@ -160,6 +160,8 @@ export const formatLlmMarkerEvent = (event: LlmMarkerEvent, verbose: boolean): s
       return `\n${BOLD}${RED}[SPEC_ISSUE]${RESET} ${event.content}\n`
     case "Done":
       return `\n${BOLD}${GREEN}[DONE]${RESET} ${event.content}\n`
+    case "NoMoreWork":
+      return `\n${BOLD}${YELLOW}[NO_MORE_WORK]${RESET} ${event.content}\n`
     case "Approved":
       return `\n${BOLD}${GREEN}[APPROVED]${RESET} ${event.content}\n`
     case "RequestChanges":

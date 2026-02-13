@@ -78,6 +78,8 @@ const formatMarker = (marker: LlmMarkerEvent): string => {
       return `\n<SPEC_ISSUE>\n${marker.content}\n</SPEC_ISSUE>\n`
     case "Done":
       return `\n<DONE>\n${marker.content}\n</DONE>\n`
+    case "NoMoreWork":
+      return `\n<NO_MORE_WORK>\n${marker.content}\n</NO_MORE_WORK>\n`
     case "Approved":
       return `\n<APPROVED>\n${marker.content}\n</APPROVED>\n`
     case "RequestChanges":
