@@ -426,7 +426,7 @@ export const LoopServiceLayer = Layer.effect(
                 }
               }
 
-              if(opts.slowMode){
+              if(opts.slowMode || implTerminal._tag === "NoMoreWork"){
               // Reviewing phase - clear stale review from previous iteration
               yield* session.clearReview()
               yield* Queue.offer(queue, new ReviewingStart({ iteration }))

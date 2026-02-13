@@ -25,7 +25,7 @@ Every command that requires an LLM provider has an `--agent` / `-a` flag to sele
 
 Project configuration is read from `.cuggino.json` via `StorageService.readConfig()` in each command handler. See [storage.md](./storage.md) for the config schema.
 
-The `--agent` flag is the only runtime CLI override — it selects which LLM provider layer to use. All other settings come from the config file.
+The `--agent` and `--slow` flags are the only runtime CLI overrides. `--agent` selects which LLM provider layer to use; `--slow` enables slow mode for the coding loop (see [overview](./overview.md)). All other settings come from the config file.
 
 ## Entrypoint
 

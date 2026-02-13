@@ -33,8 +33,10 @@ The system uses three types of agents in a loop:
   - Picks **one and only one** task to implement
   - Implements that task
   - Emits `DONE` with a descriptive summary of what was done (used as the commit message)
+- **No more work**: If the implementing agent determines that ALL tasks in the plan are already implemented and there is nothing left to do, it emits `NO_MORE_WORK` instead of `DONE`. The loop then skips commit/push (nothing changed) and proceeds directly to the reviewing agent.
 - **No internal loop**: The implementing agent runs once per loop iteration. It does not decide whether to continue — the reviewing agent controls the loop.
 - **One task only**: The implementing agent must NOT implement multiple tasks or attempt to complete the entire plan in one pass. The prompt must explicitly instruct the agent to pick a single task, implement it, emit DONE, and stop. The remaining tasks will be handled in subsequent iterations.
+- **Can signal**: `DONE` (task implemented), `NO_MORE_WORK` (all tasks already done), or spec issue (exits loop)
 
 ### 3. Reviewing Agent
 - **Input**: Specs + plan + code changes + check output (if check command configured) + (optional) initial commit hash
@@ -63,6 +65,7 @@ Agents communicate progress and decisions by emitting markers in their output. T
 | `NOTE` | Observation, finding, or choice made during implementation |
 | `SPEC_ISSUE` | Specs are unclear, ambiguous, or inconsistent — loop exits immediately |
 | `DONE` | Implementing agent finished its one task — marker text is used as the commit message |
+| `NO_MORE_WORK` | Implementing agent found all plan tasks already implemented — nothing was changed |
 | `PLAN_COMPLETE` | Planning finished, ready for implementation |
 | `APPROVED` | All plan tasks are correctly implemented and consistent with specs, loop can finish |
 | `REQUEST_CHANGES` | Tasks were implemented incorrectly, or tasks from the plan remain — loop continues |
@@ -76,6 +79,7 @@ Agents communicate progress and decisions by emitting markers in their output. T
 | `SPEC_ISSUE` | yes | yes | yes | |
 | `PLAN_COMPLETE` | yes | | | |
 | `DONE` | | yes | | |
+| `NO_MORE_WORK` | | yes | | |
 | `APPROVED` | | | yes | |
 | `REQUEST_CHANGES` | | | yes | |
 | `TO_BE_DISCUSSED` | | | | yes |
@@ -132,7 +136,80 @@ When the `push` option is set in `.cuggino.json` (e.g., `"push": "origin/main"`)
 - **Non-fatal**: If the push fails (network error, authentication issue, remote conflicts), the failure is reported as a warning but does **not** stop the loop. The user can push manually later.
 - **Value format**: The `push` value is a remote/branch reference (e.g., `origin/main`, `origin/dev`). When absent or empty, no push occurs.
 
+## Loop Modes
+
+The coding loop supports two modes, selected via the `--slow` CLI flag:
+
+### Default Mode (fast)
+
+After the planning phase, the implementing agent runs repeatedly — picking one task per iteration — until it signals `NO_MORE_WORK`. Only then does the loop proceed to review. This reduces overhead by avoiding redundant plan/review cycles for straightforward multi-task plans.
+
+### Slow Mode (`--slow`)
+
+Every iteration cycles through all three phases: plan → implement → review. After each implementing step, the reviewer evaluates the result immediately. This is more thorough but slower, as the reviewing agent provides feedback after every single task.
+
+### When Review Requests Changes
+
+In both modes, when the reviewing agent emits `REQUEST_CHANGES`, the loop returns to the planning agent with the previous plan and review file. The cycle then restarts according to the active mode.
+
 ## Main Loop Flow
+
+### Default Mode (fast)
+
+```
+                         CLI Start
+                    (user provides focus)
+                              |
+                              v
+              +------> Planning Agent  <--------------+
+              |   (creates or revises the plan)       |
+              |     SPEC_ISSUE --> EXIT (error)        |
+              |               |                        |
+              |               v                        |
+              |  Run Setup Command (if configured)     |
+              |               |                        |
+              |               v                        |
+              |  Run Check (if configured)             |
+              |               |                        |
+              |               v                        |
+              |  +-> Implementing Agent                |
+              |  |   (picks ONE task, implements it)   |
+              |  |   SPEC_ISSUE --> EXIT (error)        |
+              |  |            |                        |
+              |  |    +-------+--------+               |
+              |  |    |                |               |
+              |  |   DONE        NO_MORE_WORK          |
+              |  |    |          (skip commit/push)    |
+              |  |    v                |               |
+              |  | commit (if enabled) |               |
+              |  | push (if configured)|               |
+              |  |    |                |               |
+              |  +----+  (loop back    |               |
+              |  (implement again)     |               |
+              |                        |               |
+              |                        v               |
+              |           Run Check (if configured)    |
+              |                        |               |
+              |                        v               |
+              |              Reviewing Agent           |
+              |              (always writes review)    |
+              |              SPEC_ISSUE --> EXIT        |
+              |                        |               |
+              |             +----------+----------+    |
+              |             |                     |    |
+              |          APPROVED          REQUEST_CHANGES
+              |             |                     |    |
+              |             v                     +----+
+              |          CLI Exit             (plan agent
+              |          (success)            receives previous
+              |                              plan + review)
+              |
+   On subsequent iterations:
+   Plan agent receives previous plan +
+   review file, creates revised plan
+```
+
+### Slow Mode (`--slow`)
 
 ```
                          CLI Start
@@ -154,9 +231,15 @@ When the `push` option is set in `.cuggino.json` (e.g., `"push": "origin/main"`)
               |     (picks ONE task, implements it)    |
               |     SPEC_ISSUE --> EXIT (error)         |
               |               |                        |
-              |          DONE --> commit                |
-              |          (if enabled) then              |
-              |          push (if configured)           |
+              |       +-------+--------+               |
+              |       |                |               |
+              |      DONE        NO_MORE_WORK          |
+              |       |          (skip commit/push)    |
+              |       v                |               |
+              |  commit (if enabled)   |               |
+              |  push (if configured)  |               |
+              |       |                |               |
+              |       +-------+--------+               |
               |               |                        |
               |               v                        |
               |  Run Check (if configured)             |
@@ -173,7 +256,6 @@ When the `push` option is set in `.cuggino.json` (e.g., `"push": "origin/main"`)
               |    v                     +-------------+
               | CLI Exit             (plan agent receives
               | (success)            previous plan + review)
-              |
               |
    On subsequent iterations:
    Plan agent receives previous plan +
