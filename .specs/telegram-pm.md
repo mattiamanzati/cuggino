@@ -66,15 +66,17 @@ Telegram's typing indicator expires after ~5 seconds, so it must be re-sent cont
 
 ### Sending Responses
 
-Agent output is sent back to the Telegram chat via `sendMessage`. The bot sends:
-- **Assistant text messages** — the agent's text responses
-- **Tool call activity** — a summary of tool calls the agent makes (e.g., file reads, edits, searches)
+Agent output is streamed to the Telegram chat in real time — each `AgentMessage` event from the agent stream triggers an immediate `sendMessage` call rather than accumulating text and sending at the end. This gives the user progressive visibility into the agent's response as it's being generated.
+
+Each message text is run through the split-message logic (4096-char limit) before sending, so a single large agent message event may produce multiple Telegram messages.
+
+After the agent stream completes, if any tool calls were made during the session, a final summary message is sent listing the tools used (e.g., "Tools used: Read, Edit, Grep").
 
 Responses are sent as plain text (no `parse_mode`). The PM system prompt is appended with an instruction telling the agent to respond in plain text without markdown formatting.
 
 ### Message Length Limit
 
-Telegram messages are limited to 4096 characters. Responses longer than this limit must be split into multiple messages.
+Telegram messages are limited to 4096 characters. Each agent message event is split into multiple Telegram messages as needed before sending.
 
 ## Startup Flow
 
