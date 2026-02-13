@@ -60,6 +60,7 @@ export interface LoopRunOptions {
   readonly checkCommand?: string
   readonly commit?: boolean
   readonly push?: string
+  readonly slowMode?: boolean
 }
 
 /**
@@ -120,7 +121,7 @@ const runShellCommandToFile = (command: string, cwd: string, filePath: string): 
     const cmd = ChildProcess.make({ cwd, shell: true })`${command}`
     const handle = yield* ChildProcess.spawn(cmd)
     const exitCodeAwaiter = handle.exitCode.pipe(Effect.andThen(Effect.sleep(5000)))
-    yield* Stream.run(handle.all.pipe(Stream.interruptWhen(exitCodeAwaiter)).pipe(Stream.catchCause(() => Stream.empty)), fs.sink(filePath, { flag: "w+"}))
+    yield* Stream.run(handle.all.pipe(Stream.interruptWhen(exitCodeAwaiter), Stream.catchCause(() => Stream.empty)), fs.sink(filePath, { flag: "w+"}))
     return yield* handle.exitCode
   }).pipe(
     Effect.scoped,
@@ -296,11 +297,14 @@ export const LoopServiceLayer = Layer.effect(
 
             // State for review file path
             let reviewFilePath: Option.Option<string> = Option.none()
+            let shouldPlan = true
 
             for (let iteration = 1; iteration <= maxIterations; iteration++) {
               yield* Queue.offer(queue, new IterationStart({ iteration, maxIterations }))
 
               // Planning phase
+              if(shouldPlan){
+                shouldPlan = false
               yield* Queue.offer(queue, new PlanningStart({ iteration }))
               const tempPlanPath = yield* session.getTempPlanPath()
 
@@ -359,6 +363,7 @@ export const LoopServiceLayer = Layer.effect(
                   })
                 }
               }
+            }
 
               // Implementation phase
               yield* Queue.offer(queue, new ImplementingStart({ iteration }))
@@ -418,6 +423,7 @@ export const LoopServiceLayer = Layer.effect(
                 }
               }
 
+              if(opts.slowMode){
               // Reviewing phase - clear stale review from previous iteration
               yield* session.clearReview()
               yield* Queue.offer(queue, new ReviewingStart({ iteration }))
@@ -475,8 +481,10 @@ export const LoopServiceLayer = Layer.effect(
                     yield* session.writeReview((reviewTerminal as RequestChanges).content)
                   }
                   reviewFilePath = Option.some(reviewPath)
+                  shouldPlan = true
                 }
               }
+            }
             }
 
             yield* Queue.offer(queue, new LoopMaxIterations({ iteration: maxIterations, maxIterations }))

@@ -181,10 +181,8 @@ const planningPromptTemplate = (
   return `# Planning Task
 
   ## Current Focus
-**DO NOT PLAN FEATURES NOT INCLUDED IN THE FOCUS!**
+**MANDATORY: DO NOT PLAN FEATURES OR DOC UPDATES OR SPEC UPDATES NOT INCLUDED IN THE FOLLOWING FOCUS!**
 ${opts.focus}
-
-
 
 ${filesSection(planningFiles)}
 ## Steps
