@@ -412,8 +412,8 @@ export const LoopServiceLayer = Layer.effect(
                 return
               }
 
-              // Auto-commit if enabled (after Done)
-              if (opts.commit) {
+              // Auto-commit if enabled (after Done — skip when NoMoreWork since nothing changed)
+              if (implTerminal._tag !== "NoMoreWork" && opts.commit) {
                 const commitMessage = (implTerminal as Done).content
                 const commitResult = yield* performAutoCommit(commitMessage, opts.cwd, iteration, opts.specsPath)
                 if (commitResult !== null) {

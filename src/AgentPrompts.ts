@@ -317,7 +317,7 @@ ${filesSection([
 ${opts.checkOutputPath ? `0. Read the check output file at \`${opts.checkOutputPath}\` and fix any issues (exit code: \`${opts.checkExitCode}\`)` : ``}
 1. Read plan from ${opts.planPath}
 2. Check ${opts.sessionPath} for previous progress
-3. Pick one and only one task to implement
+3. Pick one and only one unimplemented task to implement
 4. Implement that task
 5. Emit note markers as you work for findings related to the task
 6. Emit a terminal marker
