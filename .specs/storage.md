@@ -22,11 +22,23 @@ All persistent data is stored under a `.cuggino/` folder relative to the current
 Contains temporary files for active coding loop sessions. These files are created when a session starts and cleaned up when the session ends. Managed by the `SessionService`.
 
 Files:
-- `<uuid>.md` — Session file (plan + appended markers)
+- `<uuid>.md` — Session file (plan + appended markers, see marker format below)
 - `<uuid>.review.md` — Code review file (written by reviewing agent on request changes)
 - `<uuid>.plan.md` — Temporary plan file (written by planning agent, moved to session file)
 - `<uuid>.check.txt` — Check command output (written before implementing and reviewing phases)
 - `<uuid>.setup.txt` — Setup command output (written after planning phase)
+
+### Marker Format in Session Files
+
+When markers are appended to the session file, they are rendered as Markdown headings with a timestamp and marker type:
+
+```
+## 2026-02-13 19:23:00 (NOTE)
+
+The marker content goes here.
+```
+
+This keeps the session file as clean, readable Markdown. The timestamp records when the marker was emitted, and the marker type (e.g., `NOTE`, `DONE`, `SPEC_ISSUE`) appears in parentheses.
 
 ### `spec-issues/`
 
