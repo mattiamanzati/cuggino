@@ -358,6 +358,13 @@ Description of the issue...
 <DONE>
 Quick summary of what was implemented (git commit message style, do not reference contents of the plan or review or spec, describe in general terms)
 </DONE>
+\`\`\`
+
+**NO_MORE_WORK** - ALL tasks in the plan are already implemented and no changes were made (exit):
+\`\`\`
+<NO_MORE_WORK>
+Brief explanation of why there is nothing left to implement
+</NO_MORE_WORK>
 \`\`\``
 }
 
