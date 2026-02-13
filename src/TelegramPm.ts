@@ -122,36 +122,30 @@ export const runTelegramPm = (options: RunTelegramPmOptions): Effect.Effect<void
         }
         isFirstMessage = false
 
-        let text = ""
         const tools = new Set<string>()
 
         yield* options.agent.spawn(spawnOptions).pipe(
           Stream.tap(() => typing.send),
-          Stream.runForEach((event) =>
-            Effect.sync(() => {
-              if (event._tag === "AgentMessage") {
-                text += event.text
-              } else if (event._tag === "ToolCall") {
-                tools.add(event.name)
-              }
-            })
-          ),
+          Stream.runForEach((event) => {
+            if (event._tag === "AgentMessage") {
+              return Effect.gen(function*() {
+                const chunks = splitMessage(event.text)
+                for (const chunk of chunks) {
+                  yield* sendMessage(options.botToken, chatId, chunk)
+                }
+              })
+            } else if (event._tag === "ToolCall") {
+              return Effect.sync(() => { tools.add(event.name) })
+            }
+            return Effect.void
+          }),
           Effect.catch(() =>
             sendMessage(options.botToken, chatId, "Error: agent session failed").pipe(Effect.ignore)
           )
         )
 
-        let response = text
         if (tools.size > 0) {
-          response += `\n\nTools used: ${Array.from(tools).join(", ")}`
-        }
-        if (response.trim() === "") {
-          response = "(No response)"
-        }
-
-        const chunks = splitMessage(response)
-        for (const chunk of chunks) {
-          yield* sendMessage(options.botToken, chatId, chunk)
+          yield* sendMessage(options.botToken, chatId, `Tools used: ${Array.from(tools).join(", ")}`)
         }
       }
     }
