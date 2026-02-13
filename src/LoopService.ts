@@ -10,6 +10,7 @@ import {
   Note,
   SpecIssue,
   Done,
+  NoMoreWork,
   Approved,
   RequestChanges,
   PlanComplete,
@@ -92,10 +93,12 @@ const implementingMarkerConfig: MarkerExtractorConfig<{
   NOTE: Note
   SPEC_ISSUE: SpecIssue
   DONE: Done
+  NO_MORE_WORK: NoMoreWork
 }> = {
   NOTE: (content) => new Note({ content }),
   SPEC_ISSUE: (content) => new SpecIssue({ content }),
-  DONE: (content) => new Done({ content })
+  DONE: (content) => new Done({ content }),
+  NO_MORE_WORK: (content) => new NoMoreWork({ content })
 }
 
 const reviewingMarkerConfig: MarkerExtractorConfig<{
@@ -398,7 +401,7 @@ export const LoopServiceLayer = Layer.effect(
               const implTerminal = yield* runPhaseAndEmit(
                 implMarkerStream,
                 "implementing",
-                Schema.Union([SpecIssue, Done])
+                Schema.Union([SpecIssue, Done, NoMoreWork])
               )
 
               if (implTerminal._tag === "SpecIssue") {
