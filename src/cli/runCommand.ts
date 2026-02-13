@@ -21,6 +21,9 @@ export const runCommand = Command.make(
       Flag.withAlias("a"),
       Flag.withDefault("claude"),
       Flag.withDescription("LLM provider to use")
+    ),
+    slow: Flag.boolean("slow").pipe(
+      Flag.withDescription("Run the loop in slow mode (plan → implement → review each iteration)")
     )
   },
   (args) =>
@@ -36,7 +39,8 @@ export const runCommand = Command.make(
         setupCommand: config.setupCommand,
         checkCommand: config.checkCommand,
         commit: config.commit,
-        push: config.push
+        push: config.push,
+        slowMode: args.slow
       })
 
       const terminalEvents: Array<LoopTerminalEvent> = []
