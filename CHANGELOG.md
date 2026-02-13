@@ -1,5 +1,11 @@
 # cuggino
 
+## 0.0.25
+
+### Patch Changes
+
+- [`2d9739f`](https://github.com/mattiamanzati/cuggino/commit/2d9739f79d9e8b1894e6e81f84ccc69ca299980e) Thanks [@mattiamanzati](https://github.com/mattiamanzati)! - format
+
 ## 0.0.24
 
 ### Patch Changes
