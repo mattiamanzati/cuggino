@@ -138,8 +138,7 @@ export class SessionServiceMap extends LayerMap.Service<SessionServiceMap>()("Se
         appendMarker: (marker: LlmMarkerEvent) =>
           Effect.gen(function*() {
             const now = yield* Effect.clockWith((clock) => clock.currentTimeMillis)
-            const content = yield* fs.readFileString(sessionPath)
-            yield* fs.writeFileString(sessionPath, content + formatMarker(marker, new Date(now)))
+            yield* fs.writeFileString(sessionPath, formatMarker(marker, new Date(now)), { flag: "a" })
           }).pipe(
             Effect.catch((cause) =>
               cause instanceof SessionError
