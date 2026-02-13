@@ -1,0 +1,5 @@
+---
+"cuggino": patch
+---
+
+fast mode
