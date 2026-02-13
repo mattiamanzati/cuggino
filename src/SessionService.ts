@@ -68,27 +68,34 @@ export interface SessionServiceShape {
 export class SessionService extends ServiceMap.Service<SessionService, SessionServiceShape>()("SessionService") {}
 
 /**
- * Format a marker event as markdown text
+ * Map marker _tag to its uppercase label
  */
-const formatMarker = (marker: LlmMarkerEvent): string => {
-  switch (marker._tag) {
-    case "Note":
-      return `\n<NOTE>\n${marker.content}\n</NOTE>\n`
-    case "SpecIssue":
-      return `\n<SPEC_ISSUE>\n${marker.content}\n</SPEC_ISSUE>\n`
-    case "Done":
-      return `\n<DONE>\n${marker.content}\n</DONE>\n`
-    case "NoMoreWork":
-      return `\n<NO_MORE_WORK>\n${marker.content}\n</NO_MORE_WORK>\n`
-    case "Approved":
-      return `\n<APPROVED>\n${marker.content}\n</APPROVED>\n`
-    case "RequestChanges":
-      return `\n<REQUEST_CHANGES>\n${marker.content}\n</REQUEST_CHANGES>\n`
-    case "PlanComplete":
-      return `\n<PLAN_COMPLETE>\n${marker.content}\n</PLAN_COMPLETE>\n`
-    case "ToBeDiscussed":
-      return `\n<TO_BE_DISCUSSED>\n${marker.content}\n</TO_BE_DISCUSSED>\n`
-  }
+const markerLabel: Record<LlmMarkerEvent["_tag"], string> = {
+  Note: "NOTE",
+  SpecIssue: "SPEC_ISSUE",
+  Done: "DONE",
+  NoMoreWork: "NO_MORE_WORK",
+  Approved: "APPROVED",
+  RequestChanges: "REQUEST_CHANGES",
+  PlanComplete: "PLAN_COMPLETE",
+  ToBeDiscussed: "TO_BE_DISCUSSED"
+}
+
+/**
+ * Format a timestamp as YYYY-MM-DD HH:MM:SS
+ */
+const formatTimestamp = (date: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+/**
+ * Format a marker event as a markdown heading with timestamp
+ */
+const formatMarker = (marker: LlmMarkerEvent, now: Date): string => {
+  const label = markerLabel[marker._tag]
+  const timestamp = formatTimestamp(now)
+  return `\n## ${timestamp} (${label})\n\n${marker.content}\n`
 }
 
 /**
@@ -130,8 +137,9 @@ export class SessionServiceMap extends LayerMap.Service<SessionServiceMap>()("Se
 
         appendMarker: (marker: LlmMarkerEvent) =>
           Effect.gen(function*() {
+            const now = yield* Effect.clockWith((clock) => clock.currentTimeMillis)
             const content = yield* fs.readFileString(sessionPath)
-            yield* fs.writeFileString(sessionPath, content + formatMarker(marker))
+            yield* fs.writeFileString(sessionPath, content + formatMarker(marker, new Date(now)))
           }).pipe(
             Effect.catch((cause) =>
               cause instanceof SessionError
