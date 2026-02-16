@@ -1,4 +1,4 @@
-import { Effect, Layer, ServiceMap, Data, Stream, Option, Queue, Schema, FileSystem } from "effect"
+import { Effect, Layer, ServiceMap, Data, Stream, Option, Queue, Schema } from "effect"
 import * as Uuid from "uuid"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { LlmAgent } from "./LlmAgent.js"
@@ -71,7 +71,7 @@ export interface LoopServiceShape {
   readonly run: (opts: LoopRunOptions) => Stream.Stream<
     LoopEvent,
     LoopError | LlmSessionError | SessionError | StorageError,
-    ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService | FileSystem.FileSystem
+    ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService
   >
 }
 
@@ -118,13 +118,11 @@ const hasCommand = (cmd: string | undefined): cmd is string =>
  * Run a shell command and stream its output directly to a file.
  * This function NEVER fails - it always returns an exit code (-1 on error).
  */
-const runShellCommandToFile = (command: string, cwd: string, filePath: string): Effect.Effect<number, never, ChildProcessSpawner.ChildProcessSpawner | FileSystem.FileSystem> =>
+const runShellCommandToFile = (command: string, cwd: string, filePath: string): Effect.Effect<number, never, ChildProcessSpawner.ChildProcessSpawner> =>
   Effect.gen(function*() {
-    const fs = yield* FileSystem.FileSystem
-    const cmd = ChildProcess.make({ cwd, shell: true })`${command}`
+    const escaped = filePath.replace(/'/g, "'\\''")
+    const cmd = ChildProcess.make({ cwd, shell: true })`(${command}) > '${escaped}' 2>&1`
     const handle = yield* ChildProcess.spawn(cmd)
-    const exitCodeAwaiter = handle.exitCode.pipe(Effect.andThen(Effect.sleep(5000)))
-    yield* Stream.run(handle.all.pipe(Stream.interruptWhen(exitCodeAwaiter), Stream.catchCause(() => Stream.empty)), fs.sink(filePath, { flag: "w+"}))
     return yield* handle.exitCode
   }).pipe(
     Effect.scoped,
@@ -226,7 +224,7 @@ export const LoopServiceLayer = Layer.effect(
 
     return {
       run: (opts) =>
-        Stream.callback<LoopEvent, LoopError | LlmSessionError | SessionError | StorageError, ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService | FileSystem.FileSystem>((queue) => {
+        Stream.callback<LoopEvent, LoopError | LlmSessionError | SessionError | StorageError, ChildProcessSpawner.ChildProcessSpawner | SessionServiceMap | StorageService>((queue) => {
           /**
            * Helper to run a phase stream, emit events to the queue, and return the terminal marker.
            * Captures `queue` from the Stream.callback closure.
