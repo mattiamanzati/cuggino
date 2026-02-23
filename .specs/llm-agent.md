@@ -57,7 +57,7 @@ Uses the OpenCode CLI (`opencode run`), spawned as a child process in non-intera
 
 ### Streaming Mode
 
-The OpenCode provider spawns `opencode run --format json` and parses the newline-delimited JSON event stream. OpenCode emits events with types `step_start`, `text`, and `step_finish` — the provider maps these to the common `LlmAgentEvent` model. The user prompt is passed as a positional argument.
+The OpenCode provider spawns `opencode run --format json` and parses the newline-delimited JSON event stream. OpenCode emits events with types `step_start`, `text`, `tool_use`, and `step_finish` — the provider maps these to the common `LlmAgentEvent` model. Tool events (`tool_use`) contain a `part` object with the tool name and a `state` object tracking the tool's lifecycle (`pending`, `running`, `completed`, `error`) along with input/output data. The user prompt is passed as a positional argument.
 
 ### System Prompt
 
@@ -71,7 +71,7 @@ This keeps system prompt injection contained within the project's cuggino folder
 
 ### Permissions
 
-When `dangerouslySkipPermissions` is set, the provider passes `--dangerously-skip-permissions` to auto-approve all actions.
+When `dangerouslySkipPermissions` is set, the provider sets the `OPENCODE_PERMISSION` environment variable to `{"*": "allow"}` to auto-approve all actions. This is separate from `OPENCODE_CONFIG_CONTENT` which handles the system prompt instructions.
 
 ### Considerations
 
