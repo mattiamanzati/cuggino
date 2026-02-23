@@ -76,10 +76,6 @@ const createSpawnStream = (
 ): Stream.Stream<LlmAgentEvent, LlmSessionError> => {
   const args: Array<string> = ["run", "--format", "json"]
 
-  if (options.dangerouslySkipPermissions) {
-    args.push("--dangerously-skip-permissions")
-  }
-
   // Add the prompt as the final positional argument
   args.push(options.prompt)
 
@@ -94,9 +90,12 @@ const createSpawnStream = (
           const tmpPath = path.join(cugginoDir, tmpName)
           fs.writeFileSync(tmpPath, options.systemPrompt!)
 
-          const env = {
+          const env: Record<string, string | undefined> = {
             ...process.env,
             OPENCODE_CONFIG_CONTENT: JSON.stringify({ instructions: [`.cuggino/${tmpName}`] })
+          }
+          if (options.dangerouslySkipPermissions) {
+            env.OPENCODE_PERMISSION = JSON.stringify({ "*": "allow" })
           }
 
           const child = spawn("opencode", args, {
@@ -120,9 +119,13 @@ const createSpawnStream = (
       )
     : Effect.acquireRelease(
         Effect.sync(() => {
+          const env: Record<string, string | undefined> | undefined = options.dangerouslySkipPermissions
+            ? { ...process.env, OPENCODE_PERMISSION: JSON.stringify({ "*": "allow" }) }
+            : undefined
           const child = spawn("opencode", args, {
             cwd: options.cwd,
-            stdio: ["ignore", "pipe", "pipe"]
+            stdio: ["ignore", "pipe", "pipe"],
+            env
           })
           return { child, tmpPath: null as string | null }
         }),
