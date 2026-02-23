@@ -110,4 +110,44 @@ describe("OpenCode LlmAgent E2E", () => {
 
     console.log("Received tool call events:", result.map((e) => e._tag))
   }, 120000)
+
+  it("should handle systemPrompt with special characters safely", async () => {
+    const program = Effect.gen(function*() {
+      const agent = yield* LlmAgent
+      const systemPrompt = [
+        "Rules:",
+        "1) Keep output exact",
+        "2) Preserve chars: = / \\\\ \" '",
+        "3) Path example: src/a=b/file.ts",
+        "4) Regex-ish: ^foo=bar$/",
+        "Done."
+      ].join("\n")
+
+      const events = agent.spawn({
+        prompt: 'Say exactly: "System prompt escaped"',
+        cwd: process.cwd(),
+        dangerouslySkipPermissions: true,
+        systemPrompt
+      })
+
+      const collected = yield* events.pipe(
+        Stream.runCollect,
+        Effect.map((chunk) => Array.from(chunk))
+      )
+
+      const agentMessages = collected.filter((e) => e._tag === "AgentMessage")
+      expect(agentMessages.length).toBeGreaterThan(0)
+
+      return collected
+    })
+
+    const result = await Effect.runPromise(
+      program.pipe(
+        Effect.provide(OpenCodeLlmAgentLayer.pipe(Layer.provide(NodeServices.layer))),
+        Effect.scoped
+      )
+    )
+
+    console.log("Received events with special-char systemPrompt:", result.map((e) => e._tag))
+  }, 120000)
 })
