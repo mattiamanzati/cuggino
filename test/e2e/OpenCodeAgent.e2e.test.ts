@@ -76,4 +76,38 @@ describe("OpenCode LlmAgent E2E", () => {
 
     console.log("Received events with markers:", result.map((e) => e._tag))
   }, 120000)
+
+  it("should emit tool call and tool result events", async () => {
+    const program = Effect.gen(function*() {
+      const agent = yield* LlmAgent
+
+      const events = agent.spawn({
+        prompt: "Use the Bash tool to run: echo TOOL_CALL_OK",
+        cwd: process.cwd(),
+        dangerouslySkipPermissions: true
+      })
+
+      const collected = yield* events.pipe(
+        Stream.runCollect,
+        Effect.map((chunk) => Array.from(chunk))
+      )
+
+      const toolCalls = collected.filter((e) => e._tag === "ToolCall")
+      const toolResults = collected.filter((e) => e._tag === "ToolResult")
+
+      expect(toolCalls.length).toBeGreaterThan(0)
+      expect(toolResults.length).toBeGreaterThan(0)
+
+      return collected
+    })
+
+    const result = await Effect.runPromise(
+      program.pipe(
+        Effect.provide(OpenCodeLlmAgentLayer.pipe(Layer.provide(NodeServices.layer))),
+        Effect.scoped
+      )
+    )
+
+    console.log("Received tool call events:", result.map((e) => e._tag))
+  }, 120000)
 })
