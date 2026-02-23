@@ -51,6 +51,34 @@ When `dangerouslySkipPermissions` is set, the provider passes `--dangerously-byp
 - **PingEvent generation:** Codex JSONL may not emit heartbeat events at the same frequency as Claude's `stream_event`. The provider may need to emit synthetic `PingEvent`s based on any incoming JSONL line to keep the spinner alive.
 - **Marker protocol:** Markers are prompt-driven and provider-agnostic — Codex follows the same system prompt instructions as Claude and emits the same XML markers in its text output.
 
+## Provider: OpenCode CLI
+
+Uses the OpenCode CLI (`opencode run`), spawned as a child process in non-interactive mode with NDJSON streaming output.
+
+### Streaming Mode
+
+The OpenCode provider spawns `opencode run --format json` and parses the newline-delimited JSON event stream. OpenCode emits events with types `step_start`, `text`, and `step_finish` — the provider maps these to the common `LlmAgentEvent` model. The user prompt is passed as a positional argument.
+
+### System Prompt
+
+OpenCode has no CLI flag for injecting a system prompt directly. Instead, the provider:
+
+1. Writes the system prompt to a temporary file inside the `.cuggino/` folder
+2. Spawns the process with the `OPENCODE_CONFIG_CONTENT` environment variable set to a JSON config referencing the temp file via the `instructions` array (e.g. `{"instructions": [".cuggino/tmp-prompt-xyz.md"]}`)
+3. Cleans up the temporary file when the process exits
+
+This keeps system prompt injection contained within the project's cuggino folder and avoids polluting the project with instruction files.
+
+### Permissions
+
+When `dangerouslySkipPermissions` is set, the provider passes `--dangerously-skip-permissions` to auto-approve all actions.
+
+### Considerations
+
+- **PingEvent generation:** Like Codex, the provider may need to emit synthetic `PingEvent`s based on any incoming NDJSON line to keep the spinner alive.
+- **Marker protocol:** Markers are prompt-driven and provider-agnostic — OpenCode follows the same system prompt instructions as the other providers and emits the same XML markers in its text output.
+- **Interactive mode:** OpenCode's TUI is launched by running `opencode` with no subcommand, with `stdio: "inherit"`.
+
 ## Adding More Providers
 
 When adding a new LLM provider:
