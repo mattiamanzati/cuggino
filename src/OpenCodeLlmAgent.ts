@@ -175,14 +175,15 @@ const createInteractiveSession = (
 ): Effect.Effect<number, LlmSessionError> => {
   const args: Array<string> = []
 
-  if (options.dangerouslySkipPermissions) {
-    args.push("--dangerously-skip-permissions")
-  }
+  const env = options.dangerouslySkipPermissions
+    ? { ...process.env, OPENCODE_PERMISSION: JSON.stringify({ "*": "allow" }) }
+    : undefined
 
   return Effect.callback<number, LlmSessionError>((resume) => {
     const child = spawn("opencode", args, {
       cwd: options.cwd,
-      stdio: "inherit"
+      stdio: "inherit",
+      ...(env ? { env } : {})
     })
     child.on("close", (code) => {
       resume(Effect.succeed(code ?? 0))
