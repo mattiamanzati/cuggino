@@ -8,6 +8,8 @@ import { LlmAgent, type LlmAgentInteractiveOptions, type LlmAgentSpawnOptions } 
 import {
   SystemMessage,
   AgentMessage,
+  ToolCall,
+  ToolResult,
   LlmSessionError,
   PingEvent,
   type LlmAgentEvent
@@ -19,6 +21,16 @@ import {
 interface RawOpenCodeEvent {
   type: string
   text?: string
+  part?: {
+    type?: string
+    tool?: string
+    callID?: string
+    state?: {
+      status?: string
+      input?: unknown
+      output?: string
+    }
+  }
 }
 
 /**
@@ -38,6 +50,29 @@ const parseOpenCodeEvent = (json: unknown): Effect.Effect<Array<LlmAgentEvent>, 
   switch (json.type) {
     case "step_start":
       return Effect.succeed([new SystemMessage({ text: "Session initialized" })])
+
+    case "tool_use": {
+      const events: Array<LlmAgentEvent> = []
+      const toolName = json.part?.tool ?? "unknown"
+      const state = json.part?.state
+      if (state) {
+        if (state.status === "completed" || state.status === "error") {
+          events.push(new ToolCall({ name: toolName, input: state.input ?? null }))
+          events.push(new ToolResult({
+            name: toolName,
+            output: state.output ?? "",
+            isError: state.status === "error"
+          }))
+        } else {
+          events.push(new ToolCall({ name: toolName, input: state.input ?? null }))
+        }
+      }
+      return Effect.succeed(
+        events.length > 0
+          ? events
+          : [new PingEvent({ timestamp: DateTime.nowUnsafe() })]
+      )
+    }
 
     case "text":
       if (typeof json.text === "string") {
