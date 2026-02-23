@@ -175,20 +175,46 @@ const createInteractiveSession = (
 ): Effect.Effect<number, LlmSessionError> => {
   const args: Array<string> = []
 
-  const env = options.dangerouslySkipPermissions
-    ? { ...process.env, OPENCODE_PERMISSION: JSON.stringify({ "*": "allow" }) }
-    : undefined
+  // Build environment variables
+  const env: Record<string, string | undefined> = { ...process.env }
+  let tmpPath: string | null = null
+
+  if (options.systemPrompt) {
+    const cugginoDir = path.join(options.cwd, ".cuggino")
+    fs.mkdirSync(cugginoDir, { recursive: true })
+    const tmpName = `tmp-prompt-${crypto.randomUUID()}.md`
+    tmpPath = path.join(cugginoDir, tmpName)
+    fs.writeFileSync(tmpPath, options.systemPrompt)
+    env.OPENCODE_CONFIG_CONTENT = JSON.stringify({ instructions: [`.cuggino/${tmpName}`] })
+  }
+
+  if (options.dangerouslySkipPermissions) {
+    env.OPENCODE_PERMISSION = JSON.stringify({ "*": "allow" })
+  }
+
+  const cleanupTmpFile = () => {
+    if (tmpPath) {
+      try {
+        fs.unlinkSync(tmpPath)
+      } catch {
+        // Ignore cleanup errors
+      }
+      tmpPath = null
+    }
+  }
 
   return Effect.callback<number, LlmSessionError>((resume) => {
     const child = spawn("opencode", args, {
       cwd: options.cwd,
       stdio: "inherit",
-      ...(env ? { env } : {})
+      env
     })
     child.on("close", (code) => {
+      cleanupTmpFile()
       resume(Effect.succeed(code ?? 0))
     })
     child.on("error", (err) => {
+      cleanupTmpFile()
       resume(Effect.fail(new LlmSessionError({ message: err.message })))
     })
   })
