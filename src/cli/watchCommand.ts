@@ -12,7 +12,7 @@ export const watchCommand = Command.make(
     verbose: Flag.boolean("verbose").pipe(
       Flag.withDescription("Enable verbose output")
     ),
-    agent: Flag.choice("agent", ["claude", "codex"]).pipe(
+    agent: Flag.choice("agent", ["claude", "codex", "opencode"]).pipe(
       Flag.withAlias("a"),
       Flag.withDefault("claude"),
       Flag.withDescription("LLM provider to use")

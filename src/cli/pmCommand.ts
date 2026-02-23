@@ -10,7 +10,7 @@ import { runTelegramPm } from "../TelegramPm.js"
 export const pmCommand = Command.make(
   "pm",
   {
-    agent: Flag.choice("agent", ["claude", "codex"]).pipe(
+    agent: Flag.choice("agent", ["claude", "codex", "opencode"]).pipe(
       Flag.withAlias("a"),
       Flag.withDefault("claude"),
       Flag.withDescription("LLM provider to use")
